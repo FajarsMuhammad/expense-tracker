@@ -51,7 +51,7 @@ public class CreateCategoryUseCase implements CreateCategory {
         businessEventLogger.logCategoryCreated(category.getId().getMostSignificantBits(), username, category.getName());
         metricsService.recordCategoryCreated();
 
-        return toDto(category);
+        return CategoryDto.from(category);
     }
 
     private String getCurrentUsername() {
@@ -60,15 +60,5 @@ public class CreateCategoryUseCase implements CreateCategory {
         } catch (Exception e) {
             return "system";
         }
-    }
-
-    private CategoryDto toDto(Category category) {
-        return new CategoryDto(
-                category.getId(),
-                category.getName(),
-                category.getType(),
-                category.isDefault(),
-                category.getCreatedAt()
-        );
     }
 }

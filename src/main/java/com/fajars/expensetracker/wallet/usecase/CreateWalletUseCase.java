@@ -61,7 +61,7 @@ public class CreateWalletUseCase implements CreateWallet {
         businessEventLogger.logWalletCreated(wallet.getId().getMostSignificantBits(), username, wallet.getName());
         metricsService.recordWalletCreated();
 
-        return toDto(wallet);
+        return WalletDto.from(wallet);
     }
 
     private String getCurrentUsername() {
@@ -70,28 +70,5 @@ public class CreateWalletUseCase implements CreateWallet {
         } catch (Exception e) {
             return "system";
         }
-    }
-
-    private WalletDto toDto(Wallet wallet) {
-        double currentBalance = wallet.getInitialBalance();
-        if (wallet.getTransactions() != null) {
-            for (Transaction transaction : wallet.getTransactions()) {
-                if ("INCOME".equals(transaction.getType())) {
-                    currentBalance += transaction.getAmount();
-                } else if ("EXPENSE".equals(transaction.getType())) {
-                    currentBalance -= transaction.getAmount();
-                }
-            }
-        }
-
-        return new WalletDto(
-                wallet.getId(),
-                wallet.getName(),
-                wallet.getCurrency(),
-                wallet.getInitialBalance(),
-                currentBalance,
-                wallet.getCreatedAt(),
-                wallet.getUpdatedAt()
-        );
     }
 }

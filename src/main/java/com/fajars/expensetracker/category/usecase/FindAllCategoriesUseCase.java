@@ -22,17 +22,7 @@ public class FindAllCategoriesUseCase implements FindAllCategories {
     public List<CategoryDto> findAllByUserId(UUID userId) {
         List<Category> categories = categoryRepository.findByUserIdOrUserIdIsNull(userId);
         return categories.stream()
-                .map(this::toDto)
+                .map(CategoryDto::from)
                 .collect(Collectors.toList());
-    }
-
-    private CategoryDto toDto(Category category) {
-        return new CategoryDto(
-                category.getId(),
-                category.getName(),
-                category.getType(),
-                category.isDefault(),
-                category.getCreatedAt()
-        );
     }
 }

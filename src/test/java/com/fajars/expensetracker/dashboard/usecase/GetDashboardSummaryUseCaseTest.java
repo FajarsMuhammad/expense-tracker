@@ -28,6 +28,9 @@ class GetDashboardSummaryUseCaseTest {
     @Mock
     private WalletRepository walletRepository;
 
+    @Mock
+    private com.fajars.expensetracker.common.metrics.MetricsService metricsService;
+
     @InjectMocks
     private GetDashboardSummaryUseCase useCase;
 

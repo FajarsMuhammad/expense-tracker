@@ -16,4 +16,19 @@ public record TransactionDto(
         Date createdAt,
         Date updatedAt
 ) {
+    public static TransactionDto from(Transaction transaction) {
+        return new TransactionDto(
+                transaction.getId(),
+                transaction.getWallet().getId(),
+                transaction.getWallet().getName(),
+                transaction.getCategory().getId(),
+                transaction.getCategory().getName(),
+                transaction.getType(),
+                transaction.getAmount(),
+                transaction.getNote(),
+                transaction.getDate(),
+                transaction.getCreatedAt(),
+                transaction.getUpdatedAt()
+        );
+    }
 }

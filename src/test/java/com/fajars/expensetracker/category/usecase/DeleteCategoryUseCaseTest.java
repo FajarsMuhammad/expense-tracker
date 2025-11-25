@@ -23,6 +23,9 @@ class DeleteCategoryUseCaseTest {
     @Mock
     private CategoryRepository categoryRepository;
 
+    @Mock
+    private com.fajars.expensetracker.common.logging.BusinessEventLogger businessEventLogger;
+
     @InjectMocks
     private DeleteCategoryUseCase useCase;
 

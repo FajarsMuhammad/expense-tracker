@@ -21,4 +21,14 @@ public record CategoryDto(
 
         @Schema(description = "Creation timestamp")
         Date createdAt
-) {}
+) {
+    public static CategoryDto from(Category category) {
+        return new CategoryDto(
+                category.getId(),
+                category.getName(),
+                category.getType(),
+                category.isDefault(),
+                category.getCreatedAt()
+        );
+    }
+}

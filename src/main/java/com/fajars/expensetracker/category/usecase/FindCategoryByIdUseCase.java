@@ -29,16 +29,6 @@ public class FindCategoryByIdUseCase implements FindCategoryById {
                     .orElseThrow(() -> new IllegalArgumentException("Category not found or access denied"));
         }
 
-        return toDto(category);
-    }
-
-    private CategoryDto toDto(Category category) {
-        return new CategoryDto(
-                category.getId(),
-                category.getName(),
-                category.getType(),
-                category.isDefault(),
-                category.getCreatedAt()
-        );
+        return CategoryDto.from(category);
     }
 }

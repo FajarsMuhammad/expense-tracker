@@ -21,6 +21,12 @@ class CreateWalletUseCaseTest {
     @Mock
     private WalletRepository walletRepository;
 
+    @Mock
+    private com.fajars.expensetracker.common.metrics.MetricsService metricsService;
+
+    @Mock
+    private com.fajars.expensetracker.common.logging.BusinessEventLogger businessEventLogger;
+
     @InjectMocks
     private CreateWalletUseCase useCase;
 

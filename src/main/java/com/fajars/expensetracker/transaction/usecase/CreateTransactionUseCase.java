@@ -18,16 +18,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class CreateTransactionUseCase implements CreateTransaction {
 
+    private static final Set<String> VALID_TRANSACTION_TYPES = Set.of("INCOME", "EXPENSE");
+
     private final TransactionRepository transactionRepository;
+
     private final WalletRepository walletRepository;
+
     private final CategoryRepository categoryRepository;
+
     private final MetricsService metricsService;
+
     private final BusinessEventLogger businessEventLogger;
 
     @Override
@@ -35,47 +42,68 @@ public class CreateTransactionUseCase implements CreateTransaction {
     public TransactionDto create(UUID userId, CreateTransactionRequest request) {
         long startTime = System.currentTimeMillis();
 
-        // Validate wallet ownership
-        Wallet wallet = walletRepository.findByIdAndUserId(request.walletId(), userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Wallet", request.walletId().toString()));
+        validateTransactionType(request.type());
+        Wallet wallet = validateAndGetWallet(userId, request.walletId());
+        Category category = validateAndGetCategory(request.categoryId());
 
-        // Validate category
-        Category category = categoryRepository.findById(request.categoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Category", request.categoryId().toString()));
-
-        // Validate type
-        if (!request.type().equals("INCOME") && !request.type().equals("EXPENSE")) {
-            throw new IllegalArgumentException("Transaction type must be either INCOME or EXPENSE");
-        }
-
-        // Create transaction
-        Transaction transaction = Transaction.builder()
-                .id(UUID.randomUUID())
-                .user(User.builder().id(userId).build())
-                .wallet(wallet)
-                .category(category)
-                .type(request.type())
-                .amount(request.amount())
-                .note(request.note())
-                .date(request.date())
-                .createdAt(new Date())
-                .updatedAt(new Date())
-                .build();
-
+        Transaction transaction = buildTransaction(userId, request, wallet, category);
         transaction = transactionRepository.save(transaction);
 
-        // Log business event and metrics
+        logBusinessEvent(transaction);
+        recordMetrics(startTime);
+
+        return TransactionDto.from(transaction);
+    }
+
+    private void validateTransactionType(String type) {
+        if (!VALID_TRANSACTION_TYPES.contains(type)) {
+            throw new IllegalArgumentException(
+                "Transaction type must be either INCOME or EXPENSE");
+        }
+    }
+
+    private Wallet validateAndGetWallet(UUID userId, UUID walletId) {
+        return walletRepository.findByIdAndUserId(walletId, userId)
+            .orElseThrow(() -> new ResourceNotFoundException("Wallet", walletId.toString()));
+    }
+
+    private Category validateAndGetCategory(UUID categoryId) {
+        return categoryRepository.findById(categoryId)
+            .orElseThrow(() -> new ResourceNotFoundException("Category", categoryId.toString()));
+    }
+
+    private Transaction buildTransaction(
+        UUID userId, CreateTransactionRequest request,
+        Wallet wallet, Category category
+    ) {
+        Date now = new Date();
+        return Transaction.builder()
+            .id(UUID.randomUUID())
+            .user(User.builder().id(userId).build())
+            .wallet(wallet)
+            .category(category)
+            .type(request.type())
+            .amount(request.amount())
+            .note(request.note())
+            .date(request.date())
+            .createdAt(now)
+            .updatedAt(now)
+            .build();
+    }
+
+    private void logBusinessEvent(Transaction transaction) {
         String username = getCurrentUsername();
         businessEventLogger.logTransactionCreated(
-                transaction.getId().getMostSignificantBits(),
-                username,
-                transaction.getType(),
-                transaction.getAmount()
+            transaction.getId().getMostSignificantBits(),
+            username,
+            transaction.getType(),
+            transaction.getAmount()
         );
+    }
+
+    private void recordMetrics(long startTime) {
         metricsService.recordTransactionCreated();
         metricsService.recordTransactionCreationTime(startTime);
-
-        return toDto(transaction);
     }
 
     private String getCurrentUsername() {
@@ -84,21 +112,5 @@ public class CreateTransactionUseCase implements CreateTransaction {
         } catch (Exception e) {
             return "system";
         }
-    }
-
-    private TransactionDto toDto(Transaction transaction) {
-        return new TransactionDto(
-                transaction.getId(),
-                transaction.getWallet().getId(),
-                transaction.getWallet().getName(),
-                transaction.getCategory().getId(),
-                transaction.getCategory().getName(),
-                transaction.getType(),
-                transaction.getAmount(),
-                transaction.getNote(),
-                transaction.getDate(),
-                transaction.getCreatedAt(),
-                transaction.getUpdatedAt()
-        );
     }
 }

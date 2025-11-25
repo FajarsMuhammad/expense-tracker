@@ -21,6 +21,9 @@ class DeleteWalletUseCaseTest {
     @Mock
     private WalletRepository walletRepository;
 
+    @Mock
+    private com.fajars.expensetracker.common.logging.BusinessEventLogger businessEventLogger;
+
     @InjectMocks
     private DeleteWalletUseCase useCase;
 

@@ -64,7 +64,7 @@ public class UpdateWalletUseCase implements UpdateWallet {
             );
         }
 
-        return toDto(wallet);
+        return WalletDto.from(wallet);
     }
 
     private String getCurrentUsername() {
@@ -73,28 +73,5 @@ public class UpdateWalletUseCase implements UpdateWallet {
         } catch (Exception e) {
             return "system";
         }
-    }
-
-    private WalletDto toDto(Wallet wallet) {
-        double currentBalance = wallet.getInitialBalance();
-        if (wallet.getTransactions() != null) {
-            for (Transaction transaction : wallet.getTransactions()) {
-                if ("INCOME".equals(transaction.getType())) {
-                    currentBalance += transaction.getAmount();
-                } else if ("EXPENSE".equals(transaction.getType())) {
-                    currentBalance -= transaction.getAmount();
-                }
-            }
-        }
-
-        return new WalletDto(
-            wallet.getId(),
-            wallet.getName(),
-            wallet.getCurrency(),
-            wallet.getInitialBalance(),
-            currentBalance,
-            wallet.getCreatedAt(),
-            wallet.getUpdatedAt()
-        );
     }
 }

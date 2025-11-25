@@ -23,30 +23,7 @@ public class FindAllWalletsUseCase implements FindAllWallets {
     public List<WalletDto> findAllByUserId(UUID userId) {
         List<Wallet> wallets = walletRepository.findByUserId(userId);
         return wallets.stream()
-                .map(this::toDto)
+                .map(WalletDto::from)
                 .collect(Collectors.toList());
-    }
-
-    private WalletDto toDto(Wallet wallet) {
-        double currentBalance = wallet.getInitialBalance();
-        if (wallet.getTransactions() != null) {
-            for (Transaction transaction : wallet.getTransactions()) {
-                if ("INCOME".equals(transaction.getType())) {
-                    currentBalance += transaction.getAmount();
-                } else if ("EXPENSE".equals(transaction.getType())) {
-                    currentBalance -= transaction.getAmount();
-                }
-            }
-        }
-
-        return new WalletDto(
-                wallet.getId(),
-                wallet.getName(),
-                wallet.getCurrency(),
-                wallet.getInitialBalance(),
-                currentBalance,
-                wallet.getCreatedAt(),
-                wallet.getUpdatedAt()
-        );
     }
 }

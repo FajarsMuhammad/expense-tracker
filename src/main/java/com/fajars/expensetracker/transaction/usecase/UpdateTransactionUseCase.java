@@ -16,11 +16,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class UpdateTransactionUseCase implements UpdateTransaction {
+
+    private static final Set<String> VALID_TRANSACTION_TYPES = Set.of("INCOME", "EXPENSE");
 
     private final TransactionRepository transactionRepository;
     private final WalletRepository walletRepository;
@@ -30,7 +34,22 @@ public class UpdateTransactionUseCase implements UpdateTransaction {
     @Override
     @Transactional
     public TransactionDto update(UUID userId, UUID transactionId, UpdateTransactionRequest request) {
-        // Find transaction and verify ownership
+        Transaction transaction = validateAndGetTransaction(transactionId, userId);
+
+        validateTransactionType(request.type());
+        Wallet wallet = validateAndGetWallet(userId, request.walletId());
+        Category category = validateAndGetCategory(request.categoryId());
+
+        TransactionSnapshot snapshot = captureSnapshot(transaction);
+        updateTransactionFields(transaction, request, wallet, category);
+        transaction = transactionRepository.save(transaction);
+
+        logChanges(transaction, snapshot);
+
+        return TransactionDto.from(transaction);
+    }
+
+    private Transaction validateAndGetTransaction(UUID transactionId, UUID userId) {
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction", transactionId.toString()));
 
@@ -38,26 +57,40 @@ public class UpdateTransactionUseCase implements UpdateTransaction {
             throw new IllegalArgumentException("Transaction not found or access denied");
         }
 
-        // Validate wallet ownership
-        Wallet wallet = walletRepository.findByIdAndUserId(request.walletId(), userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Wallet", request.walletId().toString()));
+        return transaction;
+    }
 
-        // Validate category
-        Category category = categoryRepository.findById(request.categoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Category", request.categoryId().toString()));
-
-        // Validate type
-        if (!request.type().equals("INCOME") && !request.type().equals("EXPENSE")) {
+    private void validateTransactionType(String type) {
+        if (!VALID_TRANSACTION_TYPES.contains(type)) {
             throw new IllegalArgumentException("Transaction type must be either INCOME or EXPENSE");
         }
+    }
 
-        // Track changes for logging
-        String oldType = transaction.getType();
-        Double oldAmount = transaction.getAmount();
-        UUID oldWalletId = transaction.getWallet().getId();
-        UUID oldCategoryId = transaction.getCategory().getId();
+    private Wallet validateAndGetWallet(UUID userId, UUID walletId) {
+        return walletRepository.findByIdAndUserId(walletId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Wallet", walletId.toString()));
+    }
 
-        // Update transaction
+    private Category validateAndGetCategory(UUID categoryId) {
+        return categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Category", categoryId.toString()));
+    }
+
+    private TransactionSnapshot captureSnapshot(Transaction transaction) {
+        return new TransactionSnapshot(
+                transaction.getType(),
+                transaction.getAmount(),
+                transaction.getWallet().getId(),
+                transaction.getCategory().getId()
+        );
+    }
+
+    private void updateTransactionFields(
+            Transaction transaction,
+            UpdateTransactionRequest request,
+            Wallet wallet,
+            Category category
+    ) {
         transaction.setWallet(wallet);
         transaction.setCategory(category);
         transaction.setType(request.type());
@@ -65,40 +98,81 @@ public class UpdateTransactionUseCase implements UpdateTransaction {
         transaction.setNote(request.note());
         transaction.setDate(request.date());
         transaction.setUpdatedAt(new Date());
+    }
 
-        transaction = transactionRepository.save(transaction);
-
-        // Log business events for significant changes
+    private void logChanges(Transaction transaction, TransactionSnapshot snapshot) {
         String username = getCurrentUsername();
-        if (!oldType.equals(transaction.getType()) || !oldAmount.equals(transaction.getAmount())) {
-            businessEventLogger.logTransactionUpdated(
-                    transaction.getId().getMostSignificantBits(),
-                    username,
-                    "type/amount",
-                    oldType + "/" + oldAmount,
-                    transaction.getType() + "/" + transaction.getAmount()
-            );
-        }
-        if (!oldWalletId.equals(transaction.getWallet().getId())) {
-            businessEventLogger.logTransactionUpdated(
-                    transaction.getId().getMostSignificantBits(),
-                    username,
-                    "wallet",
-                    oldWalletId,
-                    transaction.getWallet().getId()
-            );
-        }
-        if (!oldCategoryId.equals(transaction.getCategory().getId())) {
-            businessEventLogger.logTransactionUpdated(
-                    transaction.getId().getMostSignificantBits(),
-                    username,
-                    "category",
-                    oldCategoryId,
-                    transaction.getCategory().getId()
-            );
+        long transactionIdBits = transaction.getId().getMostSignificantBits();
+
+        if (hasTypeOrAmountChanged(transaction, snapshot)) {
+            logTypeOrAmountChange(transactionIdBits, username, snapshot, transaction);
         }
 
-        return toDto(transaction);
+        if (hasWalletChanged(transaction, snapshot)) {
+            logWalletChange(transactionIdBits, username, snapshot, transaction);
+        }
+
+        if (hasCategoryChanged(transaction, snapshot)) {
+            logCategoryChange(transactionIdBits, username, snapshot, transaction);
+        }
+    }
+
+    private boolean hasTypeOrAmountChanged(Transaction transaction, TransactionSnapshot snapshot) {
+        return !snapshot.type().equals(transaction.getType()) ||
+                !snapshot.amount().equals(transaction.getAmount());
+    }
+
+    private boolean hasWalletChanged(Transaction transaction, TransactionSnapshot snapshot) {
+        return !snapshot.walletId().equals(transaction.getWallet().getId());
+    }
+
+    private boolean hasCategoryChanged(Transaction transaction, TransactionSnapshot snapshot) {
+        return !snapshot.categoryId().equals(transaction.getCategory().getId());
+    }
+
+    private void logTypeOrAmountChange(
+            long transactionId,
+            String username,
+            TransactionSnapshot snapshot,
+            Transaction transaction
+    ) {
+        businessEventLogger.logTransactionUpdated(
+                transactionId,
+                username,
+                "type/amount",
+                snapshot.type() + "/" + snapshot.amount(),
+                transaction.getType() + "/" + transaction.getAmount()
+        );
+    }
+
+    private void logWalletChange(
+            long transactionId,
+            String username,
+            TransactionSnapshot snapshot,
+            Transaction transaction
+    ) {
+        businessEventLogger.logTransactionUpdated(
+                transactionId,
+                username,
+                "wallet",
+                snapshot.walletId(),
+                transaction.getWallet().getId()
+        );
+    }
+
+    private void logCategoryChange(
+            long transactionId,
+            String username,
+            TransactionSnapshot snapshot,
+            Transaction transaction
+    ) {
+        businessEventLogger.logTransactionUpdated(
+                transactionId,
+                username,
+                "category",
+                snapshot.categoryId(),
+                transaction.getCategory().getId()
+        );
     }
 
     private String getCurrentUsername() {
@@ -109,19 +183,11 @@ public class UpdateTransactionUseCase implements UpdateTransaction {
         }
     }
 
-    private TransactionDto toDto(Transaction transaction) {
-        return new TransactionDto(
-                transaction.getId(),
-                transaction.getWallet().getId(),
-                transaction.getWallet().getName(),
-                transaction.getCategory().getId(),
-                transaction.getCategory().getName(),
-                transaction.getType(),
-                transaction.getAmount(),
-                transaction.getNote(),
-                transaction.getDate(),
-                transaction.getCreatedAt(),
-                transaction.getUpdatedAt()
-        );
+    private record TransactionSnapshot(
+            String type,
+            Double amount,
+            UUID walletId,
+            UUID categoryId
+    ) {
     }
 }

@@ -23,17 +23,7 @@ public class FindCategoriesByTypeUseCase implements FindCategoriesByType {
     public List<CategoryDto> findByUserIdAndType(UUID userId, CategoryType type) {
         List<Category> categories = categoryRepository.findByUserIdOrUserIdIsNullAndType(userId, type);
         return categories.stream()
-                .map(this::toDto)
+                .map(CategoryDto::from)
                 .collect(Collectors.toList());
-    }
-
-    private CategoryDto toDto(Category category) {
-        return new CategoryDto(
-                category.getId(),
-                category.getName(),
-                category.getType(),
-                category.isDefault(),
-                category.getCreatedAt()
-        );
     }
 }

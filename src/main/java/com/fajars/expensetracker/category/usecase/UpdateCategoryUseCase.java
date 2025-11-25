@@ -49,7 +49,7 @@ public class UpdateCategoryUseCase implements UpdateCategory {
             );
         }
 
-        return toDto(category);
+        return CategoryDto.from(category);
     }
 
     private String getCurrentUsername() {
@@ -58,15 +58,5 @@ public class UpdateCategoryUseCase implements UpdateCategory {
         } catch (Exception e) {
             return "system";
         }
-    }
-
-    private CategoryDto toDto(Category category) {
-        return new CategoryDto(
-                category.getId(),
-                category.getName(),
-                category.getType(),
-                category.isDefault(),
-                category.getCreatedAt()
-        );
     }
 }

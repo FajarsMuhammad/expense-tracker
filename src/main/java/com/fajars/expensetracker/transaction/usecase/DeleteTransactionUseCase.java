@@ -23,7 +23,8 @@ public class DeleteTransactionUseCase implements DeleteTransaction {
     public void delete(UUID userId, UUID transactionId) {
         // Find transaction and verify ownership
         Transaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Transaction", transactionId.toString()));
+            .orElseThrow(
+                () -> new ResourceNotFoundException("Transaction", transactionId.toString()));
 
         if (!transaction.getUser().getId().equals(userId)) {
             throw new IllegalArgumentException("Transaction not found or access denied");
@@ -33,7 +34,8 @@ public class DeleteTransactionUseCase implements DeleteTransaction {
 
         // Log business event
         String username = getCurrentUsername();
-        businessEventLogger.logTransactionDeleted(transaction.getId().getMostSignificantBits(), username);
+        businessEventLogger.logTransactionDeleted(transaction.getId().getMostSignificantBits(),
+                                                  username);
     }
 
     private String getCurrentUsername() {
