@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: expense-tracker
+  datasource:
+    url: jdbc:postgresql://localhost:5432/expense_tracker
+    username:
+    password:
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    allow-unsupported-database: true
+  profiles:
+    active: dev
+
+server:
+  port: 8081
+
+# JWT secret used by JwtUtil. Replace with a secure value in production.
+# It can be a plain long string or a base64-encoded key. Example (NOT SECURE):
+# jwt:
+#   secret: change_this_to_a_secure_base64_key
+jwt:
+  secret: change_this_to_a_secure_base64_key
+
+# Spring Boot Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  info:
+    env:
+      enabled: true
+    build:
+      enabled: true
+    git:
+      enabled: true
+      mode: full
+
+# Logging Configuration
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+  level:
+    root: INFO
+    com.fajars.expensetracker: DEBUG

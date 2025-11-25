@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv:*)",
+      "Bash(mkdir:*)",
+      "Bash(cat:*)",
+      "Bash(rm:*)",
+      "Bash(./gradlew build:*)",
+      "Bash(./gradlew clean build:*)",
+      "Bash(./gradlew test:*)",
+      "Bash(./gradlew compileJava compileTestJava:*)",
+      "Bash(./gradlew compileJava:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
