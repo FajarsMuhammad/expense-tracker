@@ -9,13 +9,13 @@ The Expense Tracker API now includes interactive Swagger/OpenAPI documentation!
 Once the application is running, you can access the Swagger UI at:
 
 ```
-http://localhost:8080/swagger-ui/index.html
+http://localhost:8081/swagger-ui/index.html
 ```
 
 Or the shorter URL:
 
 ```
-http://localhost:8080/swagger-ui.html
+http://localhost:8081/swagger-ui.html
 ```
 
 ### OpenAPI JSON Specification
@@ -23,7 +23,7 @@ http://localhost:8080/swagger-ui.html
 The raw OpenAPI 3.0 specification in JSON format is available at:
 
 ```
-http://localhost:8080/v3/api-docs
+http://localhost:8081/v3/api-docs
 ```
 
 ## 🔐 Authentication in Swagger
@@ -177,7 +177,7 @@ The API supports the following currencies:
 ```
 
 ### 2. Open Swagger UI
-Navigate to: http://localhost:8080/swagger-ui.html
+Navigate to: http://localhost:8081/swagger-ui.html
 
 ### 3. Register a New User
 1. Expand `Authentication` section
