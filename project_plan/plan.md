@@ -112,7 +112,6 @@ Berikut **markdown final tanpa tambahan obrolan**, siap kamu copy langsung ke fi
 * Spring Boot (Web, Security, Data JPA, Validation)
 * Flyway
 * PostgreSQL
-* MapStruct
 * Gradle
 
 ### Frontend (Vue)
@@ -179,7 +178,8 @@ wallets (
   name TEXT,
   currency VARCHAR(3) DEFAULT 'IDR',
   initial_balance NUMERIC,
-  created_at TIMESTAMP
+  created_at TIMESTAMP,
+  updated_at TIMESTAMP
 );
 
 categories (

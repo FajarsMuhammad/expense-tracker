@@ -14,7 +14,8 @@ CREATE TABLE wallets (
   name TEXT,
   currency VARCHAR(3) DEFAULT 'IDR',
   initial_balance NUMERIC,
-  created_at TIMESTAMP
+  created_at TIMESTAMP,
+  updated_at TIMESTAMP
 );
 
 CREATE TABLE categories (
@@ -23,6 +24,7 @@ CREATE TABLE categories (
   name TEXT,
   type VARCHAR(10),
   created_at TIMESTAMP,
+  updated_at TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
