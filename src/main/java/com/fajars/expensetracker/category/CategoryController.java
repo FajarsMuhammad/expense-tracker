@@ -42,16 +42,16 @@ public class CategoryController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved categories",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = CategoryDto.class))),
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = CategoryResponse.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing JWT token", content = @Content)
     })
     @GetMapping
-    public ResponseEntity<List<CategoryDto>> listCategories(
+    public ResponseEntity<List<CategoryResponse>> listCategories(
             @Parameter(description = "Filter by category type (INCOME or EXPENSE)", required = false)
             @RequestParam(required = false) CategoryType type
     ) {
         UUID userId = getCurrentUserId();
-        List<CategoryDto> categories;
+        List<CategoryResponse> categories;
 
         if (type != null) {
             categories = findCategoriesByType.findByUserIdAndType(userId, type);
@@ -68,16 +68,16 @@ public class CategoryController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved category",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = CategoryDto.class))),
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = CategoryResponse.class))),
             @ApiResponse(responseCode = "403", description = "Forbidden - Category not found or access denied", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content)
     })
     @GetMapping("/{id}")
-    public ResponseEntity<CategoryDto> getCategory(
+    public ResponseEntity<CategoryResponse> getCategory(
             @Parameter(description = "Category ID", required = true) @PathVariable UUID id
     ) {
         UUID userId = getCurrentUserId();
-        CategoryDto category = findCategoryById.findByIdAndUserId(id, userId);
+        CategoryResponse category = findCategoryById.findByIdAndUserId(id, userId);
         return ResponseEntity.ok(category);
     }
 
@@ -87,12 +87,12 @@ public class CategoryController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Category created successfully",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = CategoryDto.class))),
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = CategoryResponse.class))),
             @ApiResponse(responseCode = "400", description = "Bad Request - Validation failed", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content)
     })
     @PostMapping
-    public ResponseEntity<CategoryDto> createCategory(
+    public ResponseEntity<CategoryResponse> createCategory(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "Category creation request",
                     required = true,
@@ -101,7 +101,7 @@ public class CategoryController {
             @Valid @RequestBody CreateCategoryRequest request
     ) {
         UUID userId = getCurrentUserId();
-        CategoryDto category = createCategory.create(userId, request);
+        CategoryResponse category = createCategory.create(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(category);
     }
 
@@ -111,13 +111,13 @@ public class CategoryController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Category updated successfully",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = CategoryDto.class))),
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = CategoryResponse.class))),
             @ApiResponse(responseCode = "400", description = "Bad Request - Validation failed", content = @Content),
             @ApiResponse(responseCode = "403", description = "Forbidden - Cannot edit default categories or categories owned by another user", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content)
     })
     @PutMapping("/{id}")
-    public ResponseEntity<CategoryDto> updateCategory(
+    public ResponseEntity<CategoryResponse> updateCategory(
             @Parameter(description = "Category ID", required = true) @PathVariable UUID id,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "Category update request",
@@ -127,7 +127,7 @@ public class CategoryController {
             @Valid @RequestBody UpdateCategoryRequest request
     ) {
         UUID userId = getCurrentUserId();
-        CategoryDto category = updateCategory.update(userId, id, request);
+        CategoryResponse category = updateCategory.update(userId, id, request);
         return ResponseEntity.ok(category);
     }
 

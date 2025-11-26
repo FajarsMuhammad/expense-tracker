@@ -1,7 +1,7 @@
 package com.fajars.expensetracker.category.usecase;
 
 import com.fajars.expensetracker.category.Category;
-import com.fajars.expensetracker.category.CategoryDto;
+import com.fajars.expensetracker.category.CategoryResponse;
 import com.fajars.expensetracker.category.CategoryRepository;
 import com.fajars.expensetracker.category.CategoryType;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,7 +60,7 @@ class FindAllCategoriesUseCaseTest {
         when(categoryRepository.findByUserIdOrUserIdIsNull(userId)).thenReturn(categories);
 
         // Act
-        List<CategoryDto> result = useCase.findAllByUserId(userId);
+        List<CategoryResponse> result = useCase.findAllByUserId(userId);
 
         // Assert
         assertNotNull(result);
@@ -76,7 +76,7 @@ class FindAllCategoriesUseCaseTest {
         when(categoryRepository.findByUserIdOrUserIdIsNull(userId)).thenReturn(Arrays.asList());
 
         // Act
-        List<CategoryDto> result = useCase.findAllByUserId(userId);
+        List<CategoryResponse> result = useCase.findAllByUserId(userId);
 
         // Assert
         assertNotNull(result);

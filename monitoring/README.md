@@ -21,13 +21,13 @@ cp .env.example .env
 
 ```bash
 # Start all services
-docker-compose -f docker-compose-monitoring.yml up -d
+docker-compose -f docker-compose.yml up -d
 
 # View logs
-docker-compose -f docker-compose-monitoring.yml logs -f
+docker-compose -f docker-compose.yml logs -f
 
 # Stop services
-docker-compose -f docker-compose-monitoring.yml down
+docker-compose -f docker-compose.yml down
 ```
 
 ### 3. Access Services
@@ -160,7 +160,7 @@ curl http://localhost:8081/actuator/prometheus
 # Go to: http://localhost:9090/targets
 
 # Check logs
-docker-compose -f docker-compose-monitoring.yml logs prometheus
+docker-compose -f docker-compose.yml logs prometheus
 ```
 
 ### Grafana Can't Connect to Prometheus
@@ -170,7 +170,7 @@ docker-compose -f docker-compose-monitoring.yml logs prometheus
 # Grafana → Configuration → Data Sources → Prometheus → Test
 
 # Check Prometheus is accessible
-docker-compose -f docker-compose-monitoring.yml exec grafana wget -O- http://prometheus:9090/-/healthy
+docker-compose -f docker-compose.yml exec grafana wget -O- http://prometheus:9090/-/healthy
 ```
 
 ## 🔒 Security Notes

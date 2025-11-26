@@ -1,0 +1,23 @@
+# K6 Performance Test Reports
+reports/*.json
+reports/*.html
+reports/*.xml
+
+# Keep the directory but not the files
+!reports/.gitkeep
+
+# Node modules (if using k6-reporter)
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# Temporary files
+*.tmp
+*.log

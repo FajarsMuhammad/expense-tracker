@@ -1,7 +1,7 @@
 package com.fajars.expensetracker.category.usecase;
 
 import com.fajars.expensetracker.category.Category;
-import com.fajars.expensetracker.category.CategoryDto;
+import com.fajars.expensetracker.category.CategoryResponse;
 import com.fajars.expensetracker.category.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,7 +17,7 @@ public class FindCategoryByIdUseCase implements FindCategoryById {
 
     @Override
     @Transactional(readOnly = true)
-    public CategoryDto findByIdAndUserId(UUID categoryId, UUID userId) {
+    public CategoryResponse findByIdAndUserId(UUID categoryId, UUID userId) {
         // First try to find as user category
         Category category = categoryRepository.findByIdAndUserId(categoryId, userId)
                 .orElse(null);
@@ -29,6 +29,6 @@ public class FindCategoryByIdUseCase implements FindCategoryById {
                     .orElseThrow(() -> new IllegalArgumentException("Category not found or access denied"));
         }
 
-        return CategoryDto.from(category);
+        return CategoryResponse.from(category);
     }
 }

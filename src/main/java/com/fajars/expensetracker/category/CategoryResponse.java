@@ -6,7 +6,7 @@ import java.util.Date;
 import java.util.UUID;
 
 @Schema(description = "Category response data")
-public record CategoryDto(
+public record CategoryResponse(
         @Schema(description = "Category ID", example = "123e4567-e89b-12d3-a456-426614174000")
         UUID id,
 
@@ -22,8 +22,8 @@ public record CategoryDto(
         @Schema(description = "Creation timestamp")
         Date createdAt
 ) {
-    public static CategoryDto from(Category category) {
-        return new CategoryDto(
+    public static CategoryResponse from(Category category) {
+        return new CategoryResponse(
                 category.getId(),
                 category.getName(),
                 category.getType(),

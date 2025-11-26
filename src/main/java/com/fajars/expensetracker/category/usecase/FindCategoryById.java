@@ -1,6 +1,6 @@
 package com.fajars.expensetracker.category.usecase;
 
-import com.fajars.expensetracker.category.CategoryDto;
+import com.fajars.expensetracker.category.CategoryResponse;
 
 import java.util.UUID;
 
@@ -9,5 +9,5 @@ import java.util.UUID;
  * User can access both default categories and their own custom categories
  */
 public interface FindCategoryById {
-    CategoryDto findByIdAndUserId(UUID categoryId, UUID userId);
+    CategoryResponse findByIdAndUserId(UUID categoryId, UUID userId);
 }

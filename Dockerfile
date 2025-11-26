@@ -1,37 +1,47 @@
 # Stage 1: Build
-FROM gradle:8.5-jdk21-alpine AS build
+FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
+
+# Copy gradle wrapper
+COPY gradlew ./
+COPY gradle ./gradle
 
 # Copy gradle files for dependency caching
 COPY build.gradle settings.gradle ./
-COPY gradle ./gradle
 
 # Download dependencies
-RUN gradle dependencies --no-daemon || return 0
+RUN ./gradlew dependencies --no-daemon || return 0
 
 # Copy source code
 COPY src ./src
 
 # Build application
-RUN gradle bootJar --no-daemon
+RUN ./gradlew bootJar --no-daemon
 
 # Stage 2: Runtime
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-# Create non-root user
-RUN addgroup -S spring && adduser -S spring -G spring
-USER spring:spring
+# Create logs directory
+RUN mkdir -p /app/logs && chmod 755 /app/logs
+
+# Create non-root user (for debian-based image)
+RUN groupadd -r spring && useradd -r -g spring spring
 
 # Copy jar from build stage
 COPY --from=build /app/build/libs/*.jar expense-tracker.jar
 
+# Set ownership
+RUN chown -R spring:spring /app
+
+USER spring:spring
+
 # Expose port
 EXPOSE 8081
 
-# Health check
+# Health check (using curl instead of wget for debian-based image)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8081/actuator/health || exit 1
+  CMD curl -f http://localhost:8081/actuator/health || exit 1
 
 # Run application
 ENTRYPOINT ["java", "-jar", "/app/expense-tracker.jar"]

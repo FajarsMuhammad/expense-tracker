@@ -1,7 +1,7 @@
 package com.fajars.expensetracker.category.usecase;
 
 import com.fajars.expensetracker.category.Category;
-import com.fajars.expensetracker.category.CategoryDto;
+import com.fajars.expensetracker.category.CategoryResponse;
 import com.fajars.expensetracker.category.CategoryRepository;
 import com.fajars.expensetracker.category.CategoryType;
 import lombok.RequiredArgsConstructor;
@@ -20,10 +20,10 @@ public class FindCategoriesByTypeUseCase implements FindCategoriesByType {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CategoryDto> findByUserIdAndType(UUID userId, CategoryType type) {
+    public List<CategoryResponse> findByUserIdAndType(UUID userId, CategoryType type) {
         List<Category> categories = categoryRepository.findByUserIdOrUserIdIsNullAndType(userId, type);
         return categories.stream()
-                .map(CategoryDto::from)
+                .map(CategoryResponse::from)
                 .collect(Collectors.toList());
     }
 }

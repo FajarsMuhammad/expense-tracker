@@ -9,7 +9,7 @@ http://localhost:8080/swagger-ui.html
 ```
 
 Swagger provides a web interface to test all APIs without writing code!
-See [SWAGGER_DOCUMENTATION.md](SWAGGER_DOCUMENTATION.md) for detailed instructions.
+See [SWAGGER_DOCUMENTATION.md](swagger_documentation.md) for detailed instructions.
 
 ---
 

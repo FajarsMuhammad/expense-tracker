@@ -1,7 +1,7 @@
 package com.fajars.expensetracker.category.usecase;
 
 import com.fajars.expensetracker.category.Category;
-import com.fajars.expensetracker.category.CategoryDto;
+import com.fajars.expensetracker.category.CategoryResponse;
 import com.fajars.expensetracker.category.CategoryRepository;
 import com.fajars.expensetracker.category.CreateCategoryRequest;
 import com.fajars.expensetracker.common.logging.BusinessEventLogger;
@@ -25,7 +25,7 @@ public class CreateCategoryUseCase implements CreateCategory {
 
     @Override
     @Transactional
-    public CategoryDto create(UUID userId, CreateCategoryRequest request) {
+    public CategoryResponse create(UUID userId, CreateCategoryRequest request) {
         // Validate name
         if (request.name() == null || request.name().trim().isEmpty()) {
             throw new IllegalArgumentException("Category name is required");
@@ -51,7 +51,7 @@ public class CreateCategoryUseCase implements CreateCategory {
         businessEventLogger.logCategoryCreated(category.getId().getMostSignificantBits(), username, category.getName());
         metricsService.recordCategoryCreated();
 
-        return CategoryDto.from(category);
+        return CategoryResponse.from(category);
     }
 
     private String getCurrentUsername() {

@@ -1,0 +1,20 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Simple config - no JSON parsing, just send raw lines
+  - job_name: expense-tracker
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: expense-tracker
+          environment: development
+          __path__: /var/log/app/application.log

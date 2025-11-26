@@ -1,7 +1,7 @@
 package com.fajars.expensetracker.category.usecase;
 
 import com.fajars.expensetracker.category.Category;
-import com.fajars.expensetracker.category.CategoryDto;
+import com.fajars.expensetracker.category.CategoryResponse;
 import com.fajars.expensetracker.category.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,10 +19,10 @@ public class FindAllCategoriesUseCase implements FindAllCategories {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CategoryDto> findAllByUserId(UUID userId) {
+    public List<CategoryResponse> findAllByUserId(UUID userId) {
         List<Category> categories = categoryRepository.findByUserIdOrUserIdIsNull(userId);
         return categories.stream()
-                .map(CategoryDto::from)
+                .map(CategoryResponse::from)
                 .collect(Collectors.toList());
     }
 }

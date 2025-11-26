@@ -1,7 +1,7 @@
 package com.fajars.expensetracker.category.usecase;
 
 import com.fajars.expensetracker.category.Category;
-import com.fajars.expensetracker.category.CategoryDto;
+import com.fajars.expensetracker.category.CategoryResponse;
 import com.fajars.expensetracker.category.CategoryRepository;
 import com.fajars.expensetracker.category.CategoryType;
 import com.fajars.expensetracker.category.UpdateCategoryRequest;
@@ -58,7 +58,7 @@ class UpdateCategoryUseCaseTest {
         when(categoryRepository.save(any(Category.class))).thenReturn(userCategory);
 
         // Act
-        CategoryDto result = useCase.update(userId, categoryId, request);
+        CategoryResponse result = useCase.update(userId, categoryId, request);
 
         // Assert
         assertNotNull(result);
