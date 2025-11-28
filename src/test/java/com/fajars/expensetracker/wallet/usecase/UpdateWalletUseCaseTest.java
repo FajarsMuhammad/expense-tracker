@@ -56,7 +56,7 @@ class UpdateWalletUseCaseTest {
         when(walletRepository.save(any(Wallet.class))).thenReturn(wallet);
 
         // Act
-        WalletDto result = useCase.update(walletId, userId, request);
+        WalletResponse result = useCase.update(walletId, userId, request);
 
         // Assert
         assertNotNull(result);

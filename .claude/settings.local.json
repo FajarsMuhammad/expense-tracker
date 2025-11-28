@@ -37,7 +37,10 @@
       "Bash(podman exec:*)",
       "Bash(do curl -s http://localhost:8081/actuator/health)",
       "Bash(podman network:*)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(find:*)",
+      "Bash(tree:*)",
+      "Bash(docker build:*)"
     ],
     "deny": [],
     "ask": []

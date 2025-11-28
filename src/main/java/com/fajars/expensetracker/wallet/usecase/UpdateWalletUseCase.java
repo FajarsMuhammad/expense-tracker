@@ -1,10 +1,9 @@
 package com.fajars.expensetracker.wallet.usecase;
 
 import com.fajars.expensetracker.common.logging.BusinessEventLogger;
-import com.fajars.expensetracker.transaction.Transaction;
 import com.fajars.expensetracker.wallet.UpdateWalletRequest;
 import com.fajars.expensetracker.wallet.Wallet;
-import com.fajars.expensetracker.wallet.WalletDto;
+import com.fajars.expensetracker.wallet.WalletResponse;
 import com.fajars.expensetracker.wallet.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,7 +22,7 @@ public class UpdateWalletUseCase implements UpdateWallet {
 
     @Override
     @Transactional
-    public WalletDto update(UUID walletId, UUID userId, UpdateWalletRequest request) {
+    public WalletResponse update(UUID walletId, UUID userId, UpdateWalletRequest request) {
         // Ownership check
         Wallet wallet = walletRepository.findByIdAndUserId(walletId, userId)
             .orElseThrow(() -> new IllegalArgumentException("Wallet not found or access denied"));
@@ -64,7 +63,7 @@ public class UpdateWalletUseCase implements UpdateWallet {
             );
         }
 
-        return WalletDto.from(wallet);
+        return WalletResponse.from(wallet);
     }
 
     private String getCurrentUsername() {

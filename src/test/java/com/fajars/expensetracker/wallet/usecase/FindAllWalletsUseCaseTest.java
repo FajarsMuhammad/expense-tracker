@@ -58,7 +58,7 @@ class FindAllWalletsUseCaseTest {
         when(walletRepository.findByUserId(userId)).thenReturn(Arrays.asList(wallet1, wallet2));
 
         // Act
-        List<WalletDto> result = useCase.findAllByUserId(userId);
+        List<WalletResponse> result = useCase.findAllByUserId(userId);
 
         // Assert
         assertNotNull(result);
@@ -74,7 +74,7 @@ class FindAllWalletsUseCaseTest {
         when(walletRepository.findByUserId(userId)).thenReturn(Arrays.asList());
 
         // Act
-        List<WalletDto> result = useCase.findAllByUserId(userId);
+        List<WalletResponse> result = useCase.findAllByUserId(userId);
 
         // Assert
         assertNotNull(result);

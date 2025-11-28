@@ -42,7 +42,7 @@ public class User {
     @OneToMany(mappedBy = "user")
     private List<Category> categories;
 
-    @OneToMany(mappedBy = "user")
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     private List<Transaction> transactions;
 
     @OneToMany(mappedBy = "user")
