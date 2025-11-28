@@ -1,8 +1,7 @@
 package com.fajars.expensetracker.wallet.usecase;
 
-import com.fajars.expensetracker.transaction.Transaction;
 import com.fajars.expensetracker.wallet.Wallet;
-import com.fajars.expensetracker.wallet.WalletDto;
+import com.fajars.expensetracker.wallet.WalletResponse;
 import com.fajars.expensetracker.wallet.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,9 +17,9 @@ public class FindWalletByIdUseCase implements FindWalletById {
 
     @Override
     @Transactional(readOnly = true)
-    public WalletDto findByIdAndUserId(UUID walletId, UUID userId) {
+    public WalletResponse findByIdAndUserId(UUID walletId, UUID userId) {
         Wallet wallet = walletRepository.findByIdAndUserId(walletId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Wallet not found or access denied"));
-        return WalletDto.from(wallet);
+        return WalletResponse.from(wallet);
     }
 }

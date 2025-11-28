@@ -1,9 +1,11 @@
 package com.fajars.expensetracker.dashboard;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 public record WeeklyTrendDto(
-        Date date,
-        Double income,
-        Double expense
-) {}
+    LocalDate date,
+    Double income,
+    Double expense
+) {
+
+}

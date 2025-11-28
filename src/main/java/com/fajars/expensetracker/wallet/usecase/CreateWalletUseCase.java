@@ -2,11 +2,10 @@ package com.fajars.expensetracker.wallet.usecase;
 
 import com.fajars.expensetracker.common.logging.BusinessEventLogger;
 import com.fajars.expensetracker.common.metrics.MetricsService;
-import com.fajars.expensetracker.transaction.Transaction;
 import com.fajars.expensetracker.user.User;
 import com.fajars.expensetracker.wallet.CreateWalletRequest;
 import com.fajars.expensetracker.wallet.Wallet;
-import com.fajars.expensetracker.wallet.WalletDto;
+import com.fajars.expensetracker.wallet.WalletResponse;
 import com.fajars.expensetracker.wallet.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,7 +26,7 @@ public class CreateWalletUseCase implements CreateWallet {
 
     @Override
     @Transactional
-    public WalletDto create(UUID userId, CreateWalletRequest request) {
+    public WalletResponse create(UUID userId, CreateWalletRequest request) {
         // Validate wallet limit for free users
         long walletCount = walletRepository.countByUserId(userId);
         if (walletCount >= FREE_USER_WALLET_LIMIT) {
@@ -61,7 +60,7 @@ public class CreateWalletUseCase implements CreateWallet {
         businessEventLogger.logWalletCreated(wallet.getId().getMostSignificantBits(), username, wallet.getName());
         metricsService.recordWalletCreated();
 
-        return WalletDto.from(wallet);
+        return WalletResponse.from(wallet);
     }
 
     private String getCurrentUsername() {
