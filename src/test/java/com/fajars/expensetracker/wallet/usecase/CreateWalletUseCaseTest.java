@@ -56,7 +56,7 @@ class CreateWalletUseCaseTest {
         when(walletRepository.save(any(Wallet.class))).thenReturn(savedWallet);
 
         // Act
-        WalletDto result = useCase.create(userId, request);
+        WalletResponse result = useCase.create(userId, request);
 
         // Assert
         assertNotNull(result);

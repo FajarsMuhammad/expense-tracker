@@ -5,6 +5,7 @@ import com.fajars.expensetracker.common.logging.BusinessEventLogger;
 import com.fajars.expensetracker.transaction.Transaction;
 import com.fajars.expensetracker.transaction.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +14,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DeleteTransactionUseCase implements DeleteTransaction {
 
     private final TransactionRepository transactionRepository;
@@ -21,21 +23,17 @@ public class DeleteTransactionUseCase implements DeleteTransaction {
     @Override
     @Transactional
     public void delete(UUID userId, UUID transactionId) {
-        // Find transaction and verify ownership
-        Transaction transaction = transactionRepository.findById(transactionId)
-            .orElseThrow(
-                () -> new ResourceNotFoundException("Transaction", transactionId.toString()));
+        log.debug("Deleting transaction {} for user {}", transactionId, userId);
 
-        if (!transaction.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("Transaction not found or access denied");
-        }
+        Transaction transaction = transactionRepository.findByIdAndUserId(transactionId, userId)
+            .orElseThrow(() -> new ResourceNotFoundException("Transaction", transactionId.toString()));
 
         transactionRepository.delete(transaction);
 
-        // Log business event
         String username = getCurrentUsername();
-        businessEventLogger.logTransactionDeleted(transaction.getId().getMostSignificantBits(),
-                                                  username);
+        businessEventLogger.logTransactionDeleted(transaction.getId().getMostSignificantBits(), username);
+
+        log.info("Transaction {} deleted successfully for user {}", transactionId, userId);
     }
 
     private String getCurrentUsername() {

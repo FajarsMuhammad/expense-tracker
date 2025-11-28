@@ -4,27 +4,23 @@ import com.fajars.expensetracker.category.Category;
 import com.fajars.expensetracker.category.CategoryRepository;
 import com.fajars.expensetracker.common.exception.ResourceNotFoundException;
 import com.fajars.expensetracker.common.logging.BusinessEventLogger;
-import com.fajars.expensetracker.transaction.Transaction;
-import com.fajars.expensetracker.transaction.TransactionDto;
-import com.fajars.expensetracker.transaction.TransactionRepository;
-import com.fajars.expensetracker.transaction.UpdateTransactionRequest;
+import com.fajars.expensetracker.transaction.*;
 import com.fajars.expensetracker.wallet.Wallet;
 import com.fajars.expensetracker.wallet.WalletRepository;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
-import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UpdateTransactionUseCase implements UpdateTransaction {
-
-    private static final Set<String> VALID_TRANSACTION_TYPES = Set.of("INCOME", "EXPENSE");
 
     private final TransactionRepository transactionRepository;
     private final WalletRepository walletRepository;
@@ -33,12 +29,13 @@ public class UpdateTransactionUseCase implements UpdateTransaction {
 
     @Override
     @Transactional
-    public TransactionDto update(UUID userId, UUID transactionId, UpdateTransactionRequest request) {
+    public TransactionResponse update(UUID userId, UUID transactionId, UpdateTransactionRequest request) {
+        log.debug("Updating transaction {} for user {}: {}", transactionId, userId, request);
+
         Transaction transaction = validateAndGetTransaction(transactionId, userId);
 
-        validateTransactionType(request.type());
         Wallet wallet = validateAndGetWallet(userId, request.walletId());
-        Category category = validateAndGetCategory(request.categoryId());
+        Category category = validateAndGetCategory(userId, request.categoryId());
 
         TransactionSnapshot snapshot = captureSnapshot(transaction);
         updateTransactionFields(transaction, request, wallet, category);
@@ -46,24 +43,13 @@ public class UpdateTransactionUseCase implements UpdateTransaction {
 
         logChanges(transaction, snapshot);
 
-        return TransactionDto.from(transaction);
+        log.info("Transaction {} updated successfully for user {}", transactionId, userId);
+        return TransactionResponse.from(transaction);
     }
 
     private Transaction validateAndGetTransaction(UUID transactionId, UUID userId) {
-        Transaction transaction = transactionRepository.findById(transactionId)
+        return transactionRepository.findByIdAndUserId(transactionId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction", transactionId.toString()));
-
-        if (!transaction.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("Transaction not found or access denied");
-        }
-
-        return transaction;
-    }
-
-    private void validateTransactionType(String type) {
-        if (!VALID_TRANSACTION_TYPES.contains(type)) {
-            throw new IllegalArgumentException("Transaction type must be either INCOME or EXPENSE");
-        }
     }
 
     private Wallet validateAndGetWallet(UUID userId, UUID walletId) {
@@ -71,9 +57,16 @@ public class UpdateTransactionUseCase implements UpdateTransaction {
                 .orElseThrow(() -> new ResourceNotFoundException("Wallet", walletId.toString()));
     }
 
-    private Category validateAndGetCategory(UUID categoryId) {
-        return categoryRepository.findById(categoryId)
+    private Category validateAndGetCategory(UUID userId, UUID categoryId) {
+        Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", categoryId.toString()));
+
+        // Validate category belongs to user or is a default category
+        if (category.getUser() != null && !category.getUser().getId().equals(userId)) {
+            throw new ResourceNotFoundException("Category", categoryId.toString());
+        }
+
+        return category;
     }
 
     private TransactionSnapshot captureSnapshot(Transaction transaction) {
@@ -97,7 +90,7 @@ public class UpdateTransactionUseCase implements UpdateTransaction {
         transaction.setAmount(request.amount());
         transaction.setNote(request.note());
         transaction.setDate(request.date());
-        transaction.setUpdatedAt(new Date());
+        transaction.setUpdatedAt(LocalDateTime.now());
     }
 
     private void logChanges(Transaction transaction, TransactionSnapshot snapshot) {
@@ -140,8 +133,8 @@ public class UpdateTransactionUseCase implements UpdateTransaction {
                 transactionId,
                 username,
                 "type/amount",
-                snapshot.type() + "/" + snapshot.amount(),
-                transaction.getType() + "/" + transaction.getAmount()
+                snapshot.type().name() + "/" + snapshot.amount(),
+                transaction.getType().name() + "/" + transaction.getAmount()
         );
     }
 
@@ -184,7 +177,7 @@ public class UpdateTransactionUseCase implements UpdateTransaction {
     }
 
     private record TransactionSnapshot(
-            String type,
+            TransactionType type,
             Double amount,
             UUID walletId,
             UUID categoryId
