@@ -217,17 +217,3 @@ flowchart TD
 * **Monitoring:** Track metrics like balance drift, failed transactions, and event lag.
 
 ---
-
-### Ready-to-use Mermaid blocks
-
-You can copy & paste the mermaid code blocks from above into your markdown files or renderers. Example renderers: GitHub (with mermaid enabled), GitLab, Mermaid Live Editor, or static site generators with Mermaid plugin.
-
----
-
-If you'd like, I can:
-
-* Add a separate sequence diagram per microservice (internal calls) with more detail.
-* Produce a PNG/SVG export of each diagram.
-* Convert flowchart into PlantUML or draw.io format.
-
-Tell me which next step you want.
