@@ -52,10 +52,12 @@ public class GetDashboardSummaryUseCase implements GetDashboardSummary {
                                                                                  endOfDay);
         }
 
-        double todayIncome = todayTransactions.stream().filter(t -> "INCOME".equals(t.getType()))
+        double todayIncome = todayTransactions.stream()
+            .filter(t -> "INCOME".equals(t.getType().name()))
             .mapToDouble(Transaction::getAmount).sum();
 
-        double todayExpense = todayTransactions.stream().filter(t -> "EXPENSE".equals(t.getType()))
+        double todayExpense = todayTransactions.stream()
+            .filter(t -> "EXPENSE".equals(t.getType().name()))
             .mapToDouble(Transaction::getAmount).sum();
 
         // Get weekly trend (last 7 days)
@@ -64,8 +66,8 @@ public class GetDashboardSummaryUseCase implements GetDashboardSummary {
         // Get recent transactions (top 5)
         List<Transaction> recentTransactions;
         if (walletId != null) {
-            recentTransactions = transactionRepository.findTop5ByUserIdAndWalletId(userId,
-                                                                                   walletId);
+            recentTransactions = transactionRepository
+                .findTop5ByUserIdAndWalletId(userId, walletId);
         } else {
             recentTransactions = transactionRepository.findTop5ByUserId(userId);
         }
@@ -99,9 +101,9 @@ public class GetDashboardSummaryUseCase implements GetDashboardSummary {
 
             if (wallet.getTransactions() != null) {
                 for (Transaction t : wallet.getTransactions()) {
-                    if ("INCOME".equals(t.getType())) {
+                    if ("INCOME".equals(t.getType().name())) {
                         balance += t.getAmount();
-                    } else if ("EXPENSE".equals(t.getType())) {
+                    } else if ("EXPENSE".equals(t.getType().name())) {
                         balance -= t.getAmount();
                     }
                 }
@@ -115,9 +117,9 @@ public class GetDashboardSummaryUseCase implements GetDashboardSummary {
                 double balance = wallet.getInitialBalance();
                 if (wallet.getTransactions() != null) {
                     for (Transaction t : wallet.getTransactions()) {
-                        if ("INCOME".equals(t.getType())) {
+                        if ("INCOME".equals(t.getType().name())) {
                             balance += t.getAmount();
-                        } else if ("EXPENSE".equals(t.getType())) {
+                        } else if ("EXPENSE".equals(t.getType().name())) {
                             balance -= t.getAmount();
                         }
                     }
@@ -137,13 +139,11 @@ public class GetDashboardSummaryUseCase implements GetDashboardSummary {
 
         List<Transaction> weekTransactions;
         if (walletId != null) {
-            weekTransactions = transactionRepository.findByUserIdAndWalletIdAndDateBetween(userId,
-                                                                                           walletId,
-                                                                                           startDate,
-                                                                                           endDate);
+            weekTransactions = transactionRepository
+                .findByUserIdAndWalletIdAndDateBetween(userId, walletId, startDate, endDate);
         } else {
-            weekTransactions = transactionRepository.findByUserIdAndDateBetween(userId, startDate,
-                                                                                endDate);
+            weekTransactions = transactionRepository
+                .findByUserIdAndDateBetween(userId, startDate, endDate);
         }
 
         Map<LocalDate, List<Transaction>> groupedByDate = new HashMap<>();
@@ -161,12 +161,19 @@ public class GetDashboardSummaryUseCase implements GetDashboardSummary {
             groupedByDate.computeIfAbsent(transactionDate, k -> new ArrayList<>()).add(t);
         }
 
-        return groupedByDate.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(entry -> {
-            double income = entry.getValue().stream().filter(t -> "INCOME".equals(t.getType()))
-                .mapToDouble(Transaction::getAmount).sum();
-            double expense = entry.getValue().stream().filter(t -> "EXPENSE".equals(t.getType()))
-                .mapToDouble(Transaction::getAmount).sum();
-            return new WeeklyTrendDto(entry.getKey(), income, expense);
-        }).collect(Collectors.toList());
+        return groupedByDate.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(entry -> {
+                double income = entry.getValue().stream()
+                    .filter(t -> "INCOME".equals(t.getType().name()))
+                    .mapToDouble(Transaction::getAmount)
+                    .sum();
+                double expense = entry.getValue().stream()
+                    .filter(t -> "EXPENSE".equals(t.getType().name()))
+                    .mapToDouble(Transaction::getAmount)
+                    .sum();
+
+                return new WeeklyTrendDto(entry.getKey(), income, expense);
+            }).collect(Collectors.toList());
     }
 }

@@ -25,6 +25,7 @@ See [SWAGGER_DOCUMENTATION.md](swagger_documentation.md) for detailed instructio
 | **Categories** | CRUD operations, Filter by type | `/api/v1/categories` | Required |
 | **Dashboard** | Summary, Weekly trends | `/api/v1/dashboard` | Required |
 | **Transactions** | CRUD operations, Filter & pagination | `/api/v1/transactions` | Required |
+| **Debts** | CRUD operations, Payments, Filters | `/api/v1/debts` | Required |
 
 ### Quick Links
 - [Authentication](#authentication) - Register, Login, Refresh
@@ -32,6 +33,7 @@ See [SWAGGER_DOCUMENTATION.md](swagger_documentation.md) for detailed instructio
 - [Wallets](#wallets) - Manage wallets
 - [Categories](#categories) - Manage income/expense categories
 - [Transactions](#transactions) - Manage income and expense transactions
+- [Debts](#debts) - Manage debts and receivables
 - [Dashboard](#dashboard) - View summaries and trends
 - [Error Responses](#error-responses) - Status codes and formats
 - [Testing with cURL](#testing-with-curl) - Command-line examples
@@ -372,6 +374,194 @@ Authorization: Bearer {token}
 - Category must not be in use by any transactions
 
 **Response:** `204 No Content`
+
+---
+
+## Debts
+
+Manage debts and receivables with payment tracking.
+
+### Create Debt
+```http
+POST /api/v1/debts
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "counterpartyName": "John Doe",
+  "totalAmount": 1000.00,
+  "dueDate": "2025-12-31T23:59:59",  // optional
+  "note": "Business loan"             // optional
+}
+```
+
+**Validation:**
+- `counterpartyName`: Required, max 255 characters
+- `totalAmount`: Required, must be positive
+- `dueDate`: Optional, future date recommended
+- `note`: Optional, max 500 characters
+
+**Response:** `201 Created`
+```json
+{
+  "id": "uuid",
+  "counterpartyName": "John Doe",
+  "totalAmount": 1000.00,
+  "remainingAmount": 1000.00,
+  "paidAmount": 0.00,
+  "dueDate": "2025-12-31T23:59:59",
+  "status": "OPEN",
+  "isOverdue": false,
+  "paymentCount": 0,
+  "createdAt": "2025-12-02T10:00:00",
+  "updatedAt": "2025-12-02T10:00:00"
+}
+```
+
+### List Debts
+```http
+GET /api/v1/debts?status=OPEN&overdue=false&page=0&size=20
+Authorization: Bearer {token}
+```
+
+**Query Parameters:**
+- `status` (optional): Filter by status (`OPEN`, `PARTIAL`, `PAID`)
+- `overdue` (optional): Filter overdue debts (`true`, `false`)
+- `page` (optional): Page number, default: 0
+- `size` (optional): Page size, default: 20, max: 100
+
+**Response:** `200 OK`
+```json
+{
+  "content": [
+    {
+      "id": "uuid",
+      "counterpartyName": "John Doe",
+      "totalAmount": 1000.00,
+      "remainingAmount": 750.00,
+      "paidAmount": 250.00,
+      "dueDate": "2025-12-31T23:59:59",
+      "status": "PARTIAL",
+      "isOverdue": false,
+      "paymentCount": 1,
+      "createdAt": "2025-12-02T10:00:00",
+      "updatedAt": "2025-12-02T11:00:00"
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 20
+  },
+  "totalElements": 5,
+  "totalPages": 1
+}
+```
+
+### Get Debt Details
+```http
+GET /api/v1/debts/{id}
+Authorization: Bearer {token}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "id": "uuid",
+  "counterpartyName": "John Doe",
+  "totalAmount": 1000.00,
+  "remainingAmount": 750.00,
+  "paidAmount": 250.00,
+  "dueDate": "2025-12-31T23:59:59",
+  "status": "PARTIAL",
+  "isOverdue": false,
+  "payments": [
+    {
+      "id": "uuid",
+      "debtId": "uuid",
+      "amount": 250.00,
+      "paidAt": "2025-12-01T10:00:00",
+      "note": "First installment"
+    }
+  ],
+  "createdAt": "2025-12-02T10:00:00",
+  "updatedAt": "2025-12-02T11:00:00"
+}
+```
+
+### Add Payment to Debt
+```http
+POST /api/v1/debts/{id}/payments
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "amount": 250.00,
+  "paidAt": "2025-12-01T10:00:00",  // optional, defaults to now
+  "note": "First installment"        // optional
+}
+```
+
+**Validation:**
+- `amount`: Required, must be positive, cannot exceed remaining amount
+- `paidAt`: Optional, defaults to current timestamp
+- `note`: Optional, max 500 characters
+
+**Response:** `201 Created`
+```json
+{
+  "payment": {
+    "id": "uuid",
+    "debtId": "uuid",
+    "amount": 250.00,
+    "paidAt": "2025-12-01T10:00:00",
+    "note": "First installment"
+  },
+  "updatedDebt": {
+    "id": "uuid",
+    "counterpartyName": "John Doe",
+    "totalAmount": 1000.00,
+    "remainingAmount": 750.00,
+    "paidAmount": 250.00,
+    "status": "PARTIAL",
+    "isOverdue": false,
+    "paymentCount": 1,
+    "createdAt": "2025-12-02T10:00:00",
+    "updatedAt": "2025-12-02T11:00:00"
+  }
+}
+```
+
+### Mark Debt as Paid
+```http
+PATCH /api/v1/debts/{id}/mark-paid
+Authorization: Bearer {token}
+```
+
+**Description:** Marks a debt as fully paid by setting remaining amount to zero.
+
+**Response:** `200 OK`
+```json
+{
+  "id": "uuid",
+  "counterpartyName": "John Doe",
+  "totalAmount": 1000.00,
+  "remainingAmount": 0.00,
+  "paidAmount": 1000.00,
+  "dueDate": "2025-12-31T23:59:59",
+  "status": "PAID",
+  "isOverdue": false,
+  "paymentCount": 1,
+  "createdAt": "2025-12-02T10:00:00",
+  "updatedAt": "2025-12-02T12:00:00"
+}
+```
+
+**Debt Status Flow:**
+```
+OPEN (no payments) → PARTIAL (some payments) → PAID (fully paid)
+```
+
+---
 
 ## Dashboard
 
