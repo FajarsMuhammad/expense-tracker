@@ -152,9 +152,13 @@ Composables:
   - Daily/weekly/monthly aggregation
 - [ ] Add `getTopCategories(userId, startDate, endDate, type, limit)`
   - ORDER BY amount DESC
-- [ ] Add optimized indexes for report queries
-  - Index on (user_id, date, type)
-  - Index on (user_id, category_id, date)
+- [x] Add optimized indexes for report queries (V3 migration)
+  - Index on (user_id, date DESC)
+  - Index on (user_id, date DESC, type)
+  - Index on (user_id, category_id, date DESC)
+  - Index on (user_id, wallet_id, date DESC)
+  - Composite index for complex filters
+  - 13 total indexes created
 
 #### DebtRepository Extensions
 - [ ] Add `getDebtSummary(userId, type)`
@@ -320,8 +324,8 @@ Composables:
   - Defaults to last 30 days, DAILY granularity
 - [x] Add Swagger documentation for all endpoints
 - [x] Use UserContext utility for authentication (eliminates boilerplate)
-- [ ] Add validation for date ranges
-- [ ] Add subscription tier checks
+- [x] Add validation for date ranges (DateRangeValidator)
+- [x] Add subscription tier checks (SubscriptionService)
 
 #### ExportController (`/api/v1/export`)
 - [x] `POST /transactions` - Export transactions
@@ -336,7 +340,8 @@ Composables:
   - Returns: PDF or Excel file
 - [x] Implement export quota checking (free tier: 100 records)
 - [x] Use UserContext utility for authentication
-- [ ] Add rate limiting (max 10 exports per minute)
+- [x] Add rate limiting (max 10 exports per minute via RateLimiter)
+- [x] Premium format restrictions (PDF/Excel require premium)
 - [ ] Add correlation ID for tracking
 
 #### AnalyticsController (`/api/v1/analytics`)

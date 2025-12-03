@@ -1,7 +1,10 @@
 package com.fajars.expensetracker.report;
 
+import com.fajars.expensetracker.common.exception.RateLimitExceededException;
+import com.fajars.expensetracker.common.ratelimit.RateLimiter;
 import com.fajars.expensetracker.common.security.UserContext;
 import com.fajars.expensetracker.report.usecase.ExportTransactions;
+import com.fajars.expensetracker.subscription.SubscriptionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -27,6 +30,8 @@ public class ExportController {
 
     private final ExportTransactions exportTransactions;
     private final UserContext userContext;
+    private final RateLimiter rateLimiter;
+    private final SubscriptionService subscriptionService;
 
     /**
      * Export transactions in the specified format.
@@ -57,10 +62,28 @@ public class ExportController {
         log.info("POST /api/v1/export/transactions - userId: {}, format: {}",
             userId, request.format());
 
+        // Check rate limit (10 exports per minute)
+        if (!rateLimiter.allowExport(userId)) {
+            int remaining = rateLimiter.getRemainingExports(userId);
+            throw new RateLimitExceededException(
+                String.format("Export rate limit exceeded. Maximum 10 exports per minute allowed. " +
+                    "Please try again later. Remaining: %d", remaining)
+            );
+        }
+
+        // Check premium features
+        boolean isPremium = subscriptionService.isPremiumUser(userId);
+        if (!isPremium && (request.format() == ExportFormat.PDF || request.format() == ExportFormat.EXCEL)) {
+            throw new IllegalArgumentException(
+                String.format("Format %s is only available for premium users. " +
+                    "Please upgrade your subscription or use CSV format.", request.format())
+            );
+        }
+
         ExportResponse response = exportTransactions.export(userId, request);
 
-        log.info("Export completed: {}, size: {} bytes",
-            response.fileName(), response.fileSize());
+        log.info("Export completed: {}, size: {} bytes, remaining exports: {}",
+            response.fileName(), response.fileSize(), rateLimiter.getRemainingExports(userId));
 
         return ResponseEntity.ok(response);
     }

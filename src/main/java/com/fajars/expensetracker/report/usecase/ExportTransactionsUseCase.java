@@ -6,6 +6,7 @@ import com.fajars.expensetracker.report.*;
 import com.fajars.expensetracker.report.export.CsvExporter;
 import com.fajars.expensetracker.report.export.ExcelExporter;
 import com.fajars.expensetracker.report.export.PdfExporter;
+import com.fajars.expensetracker.subscription.SubscriptionService;
 import com.fajars.expensetracker.transaction.Transaction;
 import com.fajars.expensetracker.transaction.TransactionRepository;
 import lombok.RequiredArgsConstructor;
@@ -41,9 +42,7 @@ public class ExportTransactionsUseCase implements ExportTransactions {
     private final PdfExporter pdfExporter;
     private final MetricsService metricsService;
     private final BusinessEventLogger businessEventLogger;
-
-    // TODO: Inject SubscriptionService when implemented
-    private static final int FREE_TIER_EXPORT_LIMIT = 100;
+    private final SubscriptionService subscriptionService;
 
     @Override
     @Transactional(readOnly = true)
@@ -94,16 +93,13 @@ public class ExportTransactionsUseCase implements ExportTransactions {
     /**
      * Validate export quota based on user subscription tier.
      * Free users: limited to 100 records
-     * Premium users: unlimited
+     * Premium users: up to 10,000 records
      */
     private void validateExportQuota(UUID userId, ExportRequest request) {
-        // TODO: Check subscription tier from SubscriptionService
-        boolean isPremium = false;  // Placeholder
+        boolean isPremium = subscriptionService.isPremiumUser(userId);
+        int exportLimit = subscriptionService.getExportLimit(userId);
 
-        if (!isPremium && request.filter() != null) {
-            // For free tier, enforce limit
-            log.debug("Applying free tier export limit: {}", FREE_TIER_EXPORT_LIMIT);
-        }
+        log.debug("Export quota for user {}: {} (premium: {})", userId, exportLimit, isPremium);
 
         // Note: The actual limit is enforced in fetchTransactions
     }
@@ -112,17 +108,19 @@ public class ExportTransactionsUseCase implements ExportTransactions {
      * Fetch transactions based on filter criteria.
      */
     private List<Transaction> fetchTransactions(UUID userId, ReportFilter filter) {
+        int exportLimit = subscriptionService.getExportLimit(userId);
+
         if (filter == null) {
             // Default filter: last 30 days
             filter = new ReportFilter(
                 LocalDateTime.now().minusDays(30),
                 LocalDateTime.now(),
-                null, null, null, 0, FREE_TIER_EXPORT_LIMIT
+                null, null, null, 0, exportLimit
             );
         }
 
         // Apply export limit to page size
-        int maxSize = Math.min(filter.size(), FREE_TIER_EXPORT_LIMIT);
+        int maxSize = Math.min(filter.size(), exportLimit);
 
         Pageable pageable = PageRequest.of(
             filter.page(),

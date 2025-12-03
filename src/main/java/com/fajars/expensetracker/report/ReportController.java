@@ -33,6 +33,8 @@ public class ReportController {
     private final GenerateFinancialSummary generateFinancialSummary;
     private final GetIncomeExpenseTrend getIncomeExpenseTrend;
     private final UserContext userContext;
+    private final DateRangeValidator dateRangeValidator;
+    private final SubscriptionService subscriptionService;
 
     /**
      * Get financial summary report with category breakdown and wallet balances.
@@ -63,6 +65,14 @@ public class ReportController {
         }
         if (endDate == null) {
             endDate = LocalDateTime.now();
+        }
+
+        // Validate date range based on subscription tier
+        boolean isPremium = subscriptionService.isPremiumUser(userId);
+        if (isPremium) {
+            dateRangeValidator.validatePremiumTier(startDate, endDate);
+        } else {
+            dateRangeValidator.validateFreeTier(startDate, endDate);
         }
 
         ReportFilter filter = new ReportFilter(
@@ -112,6 +122,14 @@ public class ReportController {
         }
         if (endDate == null) {
             endDate = LocalDateTime.now();
+        }
+
+        // Validate date range based on subscription tier
+        boolean isPremium = subscriptionService.isPremiumUser(userId);
+        if (isPremium) {
+            dateRangeValidator.validatePremiumTier(startDate, endDate);
+        } else {
+            dateRangeValidator.validateFreeTier(startDate, endDate);
         }
 
         ReportFilter filter = new ReportFilter(
