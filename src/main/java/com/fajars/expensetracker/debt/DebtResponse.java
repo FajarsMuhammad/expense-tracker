@@ -14,6 +14,9 @@ public record DebtResponse(
     @Schema(description = "Unique identifier of the debt")
     UUID id,
 
+    @Schema(description = "Type of debt: PAYABLE or RECEIVABLE")
+    DebtType type,
+
     @Schema(description = "Name of the counterparty")
     String counterpartyName,
 
@@ -35,6 +38,9 @@ public record DebtResponse(
     @Schema(description = "Whether the debt is overdue")
     Boolean isOverdue,
 
+    @Schema(description = "Additional notes")
+    String note,
+
     @Schema(description = "Number of payments made")
     Integer paymentCount,
 
@@ -54,6 +60,7 @@ public record DebtResponse(
 
         return new DebtResponse(
             debt.getId(),
+            debt.getType(),
             debt.getCounterpartyName(),
             debt.getTotalAmount(),
             debt.getRemainingAmount(),
@@ -61,6 +68,7 @@ public record DebtResponse(
             debt.getDueDate(),
             debt.getStatus(),
             debt.isOverdue(),
+            debt.getNote(),
             paymentCount,
             debt.getCreatedAt(),
             debt.getUpdatedAt()

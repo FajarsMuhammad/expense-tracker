@@ -388,23 +388,28 @@ Authorization: Bearer {token}
 Content-Type: application/json
 
 {
+  "type": "PAYABLE",                  // required: PAYABLE or RECEIVABLE
   "counterpartyName": "John Doe",
   "totalAmount": 1000.00,
-  "dueDate": "2025-12-31T23:59:59",  // optional
+  "dueDate": "2025-12-31T23:59:59",
   "note": "Business loan"             // optional
 }
 ```
 
 **Validation:**
+- `type`: Required, must be `PAYABLE` or `RECEIVABLE`
+    - `PAYABLE`: Money you owe to others (liabilities)
+    - `RECEIVABLE`: Money owed to you (assets)
 - `counterpartyName`: Required, max 255 characters
 - `totalAmount`: Required, must be positive
-- `dueDate`: Optional, future date recommended
+- `dueDate`: Required, ISO datetime format (e.g., "2025-12-31T23:59:59")
 - `note`: Optional, max 500 characters
 
 **Response:** `201 Created`
 ```json
 {
   "id": "uuid",
+  "type": "PAYABLE",
   "counterpartyName": "John Doe",
   "totalAmount": 1000.00,
   "remainingAmount": 1000.00,
@@ -412,7 +417,9 @@ Content-Type: application/json
   "dueDate": "2025-12-31T23:59:59",
   "status": "OPEN",
   "isOverdue": false,
+  "note": "Business loan",
   "paymentCount": 0,
+  "payments": [],
   "createdAt": "2025-12-02T10:00:00",
   "updatedAt": "2025-12-02T10:00:00"
 }
@@ -420,13 +427,14 @@ Content-Type: application/json
 
 ### List Debts
 ```http
-GET /api/v1/debts?status=OPEN&overdue=false&page=0&size=20
+GET /api/v1/debts?type=PAYABLE&status=OPEN&overdue=false&page=0&size=20
 Authorization: Bearer {token}
 ```
 
 **Query Parameters:**
+- `type` (optional): Filter by debt type (`PAYABLE`, `RECEIVABLE`)
 - `status` (optional): Filter by status (`OPEN`, `PARTIAL`, `PAID`)
-- `overdue` (optional): Filter overdue debts (`true`, `false`)
+- `overdue` (optional): Filter overdue debts (boolean: `true` or `false`, not null)
 - `page` (optional): Page number, default: 0
 - `size` (optional): Page size, default: 20, max: 100
 
@@ -436,6 +444,7 @@ Authorization: Bearer {token}
   "content": [
     {
       "id": "uuid",
+      "type": "PAYABLE",
       "counterpartyName": "John Doe",
       "totalAmount": 1000.00,
       "remainingAmount": 750.00,
@@ -443,6 +452,7 @@ Authorization: Bearer {token}
       "dueDate": "2025-12-31T23:59:59",
       "status": "PARTIAL",
       "isOverdue": false,
+      "note": "Business loan",
       "paymentCount": 1,
       "createdAt": "2025-12-02T10:00:00",
       "updatedAt": "2025-12-02T11:00:00"
@@ -453,7 +463,9 @@ Authorization: Bearer {token}
     "pageSize": 20
   },
   "totalElements": 5,
-  "totalPages": 1
+  "totalPages": 1,
+  "first": true,
+  "last": true
 }
 ```
 
@@ -467,6 +479,7 @@ Authorization: Bearer {token}
 ```json
 {
   "id": "uuid",
+  "type": "PAYABLE",
   "counterpartyName": "John Doe",
   "totalAmount": 1000.00,
   "remainingAmount": 750.00,
@@ -474,6 +487,8 @@ Authorization: Bearer {token}
   "dueDate": "2025-12-31T23:59:59",
   "status": "PARTIAL",
   "isOverdue": false,
+  "note": "Business loan",
+  "paymentCount": 1,
   "payments": [
     {
       "id": "uuid",
@@ -487,6 +502,56 @@ Authorization: Bearer {token}
   "updatedAt": "2025-12-02T11:00:00"
 }
 ```
+
+### Update Debt
+```http
+PUT /api/v1/debts/{id}
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "type": "PAYABLE",
+  "counterpartyName": "John Doe Updated",
+  "totalAmount": 1200.00,
+  "dueDate": "2025-12-31T23:59:59",
+  "note": "Updated business loan"
+}
+```
+
+**Validation:**
+- Same as Create Debt
+- User must own the debt
+
+**Response:** `200 OK`
+```json
+{
+  "id": "uuid",
+  "type": "PAYABLE",
+  "counterpartyName": "John Doe Updated",
+  "totalAmount": 1200.00,
+  "remainingAmount": 950.00,
+  "paidAmount": 250.00,
+  "dueDate": "2025-12-31T23:59:59",
+  "status": "PARTIAL",
+  "isOverdue": false,
+  "note": "Updated business loan",
+  "paymentCount": 1,
+  "payments": [...],
+  "createdAt": "2025-12-02T10:00:00",
+  "updatedAt": "2025-12-02T15:00:00"
+}
+```
+
+### Delete Debt
+```http
+DELETE /api/v1/debts/{id}
+Authorization: Bearer {token}
+```
+
+**Constraints:**
+- User must own the debt
+
+**Response:** `204 No Content`
 
 ### Add Payment to Debt
 ```http
@@ -506,43 +571,47 @@ Content-Type: application/json
 - `paidAt`: Optional, defaults to current timestamp
 - `note`: Optional, max 500 characters
 
-**Response:** `201 Created`
+**Response:** `200 OK` (Returns the updated debt with all payments)
 ```json
 {
-  "payment": {
-    "id": "uuid",
-    "debtId": "uuid",
-    "amount": 250.00,
-    "paidAt": "2025-12-01T10:00:00",
-    "note": "First installment"
-  },
-  "updatedDebt": {
-    "id": "uuid",
-    "counterpartyName": "John Doe",
-    "totalAmount": 1000.00,
-    "remainingAmount": 750.00,
-    "paidAmount": 250.00,
-    "status": "PARTIAL",
-    "isOverdue": false,
-    "paymentCount": 1,
-    "createdAt": "2025-12-02T10:00:00",
-    "updatedAt": "2025-12-02T11:00:00"
-  }
+  "id": "uuid",
+  "type": "PAYABLE",
+  "counterpartyName": "John Doe",
+  "totalAmount": 1000.00,
+  "remainingAmount": 750.00,
+  "paidAmount": 250.00,
+  "dueDate": "2025-12-31T23:59:59",
+  "status": "PARTIAL",
+  "isOverdue": false,
+  "note": "Business loan",
+  "paymentCount": 1,
+  "payments": [
+    {
+      "id": "uuid",
+      "debtId": "uuid",
+      "amount": 250.00,
+      "paidAt": "2025-12-01T10:00:00",
+      "note": "First installment"
+    }
+  ],
+  "createdAt": "2025-12-02T10:00:00",
+  "updatedAt": "2025-12-02T11:00:00"
 }
 ```
 
 ### Mark Debt as Paid
 ```http
-PATCH /api/v1/debts/{id}/mark-paid
+POST /api/v1/debts/{id}/mark-paid
 Authorization: Bearer {token}
 ```
 
-**Description:** Marks a debt as fully paid by setting remaining amount to zero.
+**Description:** Marks a debt as fully paid by setting remaining amount to zero and status to PAID.
 
 **Response:** `200 OK`
 ```json
 {
   "id": "uuid",
+  "type": "PAYABLE",
   "counterpartyName": "John Doe",
   "totalAmount": 1000.00,
   "remainingAmount": 0.00,
@@ -550,7 +619,9 @@ Authorization: Bearer {token}
   "dueDate": "2025-12-31T23:59:59",
   "status": "PAID",
   "isOverdue": false,
+  "note": "Business loan",
   "paymentCount": 1,
+  "payments": [...],
   "createdAt": "2025-12-02T10:00:00",
   "updatedAt": "2025-12-02T12:00:00"
 }
@@ -560,6 +631,10 @@ Authorization: Bearer {token}
 ```
 OPEN (no payments) → PARTIAL (some payments) → PAID (fully paid)
 ```
+
+**Debt Types:**
+- **PAYABLE**: Money you owe to others (liabilities)
+- **RECEIVABLE**: Money owed to you (assets)
 
 ---
 

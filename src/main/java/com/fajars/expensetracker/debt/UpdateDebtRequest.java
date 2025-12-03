@@ -6,10 +6,10 @@ import jakarta.validation.constraints.*;
 import java.time.LocalDateTime;
 
 /**
- * Request DTO for creating a new debt.
+ * Request DTO for updating an existing debt.
  */
-@Schema(description = "Request to create a new debt")
-public record CreateDebtRequest(
+@Schema(description = "Request to update an existing debt")
+public record UpdateDebtRequest(
 
     @NotNull(message = "Debt type is required")
     @Schema(description = "Type of debt: PAYABLE (you owe) or RECEIVABLE (owed to you)", example = "PAYABLE")
@@ -22,7 +22,7 @@ public record CreateDebtRequest(
 
     @NotNull(message = "Total amount is required")
     @Positive(message = "Total amount must be positive")
-    @Schema(description = "Total amount of the debt", example = "1000.00")
+    @Schema(description = "Total amount of the debt", example = "1200.00")
     Double totalAmount,
 
     @NotNull(message = "Due date is required")
@@ -30,7 +30,7 @@ public record CreateDebtRequest(
     LocalDateTime dueDate,
 
     @Size(max = 500, message = "Note must not exceed 500 characters")
-    @Schema(description = "Additional notes about the debt", example = "Loan for business expenses")
+    @Schema(description = "Additional notes about the debt", example = "Updated business loan")
     String note
 ) {
 }

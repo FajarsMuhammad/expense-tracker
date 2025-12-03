@@ -39,6 +39,21 @@ public interface DebtRepository extends JpaRepository<Debt, UUID> {
     Page<Debt> findByUserId(@Param("userId") UUID userId, Pageable pageable);
 
     /**
+     * Find debts by user and type.
+     *
+     * @param userId the user ID
+     * @param type the debt type
+     * @param pageable pagination information
+     * @return Page of debts
+     */
+    @Query("SELECT d FROM Debt d WHERE d.user.id = :userId AND d.type = :type ORDER BY d.createdAt DESC")
+    Page<Debt> findByUserIdAndType(
+        @Param("userId") UUID userId,
+        @Param("type") DebtType type,
+        Pageable pageable
+    );
+
+    /**
      * Find debts by user and status.
      *
      * @param userId the user ID
@@ -49,6 +64,23 @@ public interface DebtRepository extends JpaRepository<Debt, UUID> {
     @Query("SELECT d FROM Debt d WHERE d.user.id = :userId AND d.status = :status ORDER BY d.createdAt DESC")
     Page<Debt> findByUserIdAndStatus(
         @Param("userId") UUID userId,
+        @Param("status") DebtStatus status,
+        Pageable pageable
+    );
+
+    /**
+     * Find debts by user, type and status.
+     *
+     * @param userId the user ID
+     * @param type the debt type
+     * @param status the debt status
+     * @param pageable pagination information
+     * @return Page of debts
+     */
+    @Query("SELECT d FROM Debt d WHERE d.user.id = :userId AND d.type = :type AND d.status = :status ORDER BY d.createdAt DESC")
+    Page<Debt> findByUserIdAndTypeAndStatus(
+        @Param("userId") UUID userId,
+        @Param("type") DebtType type,
         @Param("status") DebtStatus status,
         Pageable pageable
     );
