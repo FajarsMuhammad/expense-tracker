@@ -6,9 +6,10 @@ import com.fajars.expensetracker.report.CategoryBreakdownDto;
 import com.fajars.expensetracker.report.FinancialSummaryResponse;
 import com.fajars.expensetracker.report.ReportFilter;
 import com.fajars.expensetracker.report.WalletBalanceDto;
-import com.fajars.expensetracker.transaction.Transaction;
 import com.fajars.expensetracker.transaction.TransactionRepository;
 import com.fajars.expensetracker.transaction.TransactionType;
+import com.fajars.expensetracker.transaction.projection.CategoryBreakdown;
+import com.fajars.expensetracker.transaction.projection.TransactionSummary;
 import com.fajars.expensetracker.wallet.Wallet;
 import com.fajars.expensetracker.wallet.WalletRepository;
 import lombok.RequiredArgsConstructor;
@@ -50,16 +51,16 @@ public class GenerateFinancialSummaryUseCase implements GenerateFinancialSummary
         log.debug("Generating financial summary for user {} with filter: {}", userId, filter);
 
         // 1. Get aggregated summary (single optimized query)
-        Object[] summary = transactionRepository.getSummaryByDateRange(
+        TransactionSummary summary = transactionRepository.getSummaryByDateRange(
             userId,
             filter.startDate(),
             filter.endDate(),
             filter.hasWalletFilter() ? filter.walletIds() : null
         );
 
-        Double totalIncome = (Double) summary[0];
-        Double totalExpense = (Double) summary[1];
-        Long transactionCount = (Long) summary[2];
+        Double totalIncome = summary.getTotalIncome().doubleValue();
+        Double totalExpense = summary.getTotalExpense().doubleValue();
+        Long transactionCount = summary.getTransactionCount();
 
         // 2. Get category breakdowns (2 separate queries for income and expense)
         List<CategoryBreakdownDto> incomeByCategory = getCategoryBreakdown(
@@ -117,7 +118,7 @@ public class GenerateFinancialSummaryUseCase implements GenerateFinancialSummary
         TransactionType type,
         Double total
     ) {
-        List<Object[]> results = transactionRepository.getCategoryBreakdown(
+        List<CategoryBreakdown> results = transactionRepository.getCategoryBreakdown(
             userId,
             filter.startDate(),
             filter.endDate(),
@@ -127,12 +128,12 @@ public class GenerateFinancialSummaryUseCase implements GenerateFinancialSummary
 
         return results.stream()
             .map(row -> new CategoryBreakdownDto(
-                (UUID) row[0],                      // category ID
-                (String) row[1],                    // category name
-                type.name(),                        // type
-                (Double) row[3],                    // total amount
-                ((Long) row[4]).intValue(),         // transaction count
-                calculatePercentage((Double) row[3], total)  // percentage
+                row.getCategoryId(),
+                row.getCategoryName(),
+                type.name(),
+                row.getTotalAmount().doubleValue(),
+                row.getTransactionCount().intValue(),
+                calculatePercentage(row.getTotalAmount().doubleValue(), total)
             ))
             .toList();
     }

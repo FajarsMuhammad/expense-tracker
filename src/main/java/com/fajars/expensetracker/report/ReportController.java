@@ -3,8 +3,10 @@ package com.fajars.expensetracker.report;
 import com.fajars.expensetracker.common.security.UserContext;
 import com.fajars.expensetracker.common.validation.DateRangeValidator;
 import com.fajars.expensetracker.report.usecase.GenerateFinancialSummary;
+import com.fajars.expensetracker.report.usecase.GetCategoryBreakdown;
 import com.fajars.expensetracker.report.usecase.GetIncomeExpenseTrend;
 import com.fajars.expensetracker.subscription.SubscriptionService;
+import com.fajars.expensetracker.transaction.TransactionType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +14,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,7 +29,7 @@ import java.util.UUID;
  * - GET /api/v1/reports/trend - Income/expense trend data for charts
  */
 @RestController
-@RequestMapping("/api/v1/reports")
+@RequestMapping("/reports")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Reports", description = "Financial reports and analytics")
@@ -32,15 +37,18 @@ public class ReportController {
 
     private final GenerateFinancialSummary generateFinancialSummary;
     private final GetIncomeExpenseTrend getIncomeExpenseTrend;
+    private final GetCategoryBreakdown getCategoryBreakdown;
     private final UserContext userContext;
     private final DateRangeValidator dateRangeValidator;
     private final SubscriptionService subscriptionService;
+
+    private static final ZoneId JAKARTA_ZONE = ZoneId.of("Asia/Jakarta");
 
     /**
      * Get financial summary report with category breakdown and wallet balances.
      *
      * @param startDate optional start date (defaults to 30 days ago)
-     * @param endDate optional end date (defaults to now)
+     * @param endDate optional end date (defaults to today)
      * @param walletIds optional wallet filter
      * @param categoryIds optional category filter
      * @return financial summary response
@@ -51,33 +59,36 @@ public class ReportController {
         description = "Get comprehensive financial summary including total income, expenses, category breakdown, and wallet balances. Defaults to last 30 days if no dates provided."
     )
     public ResponseEntity<FinancialSummaryResponse> getFinancialSummary(
-        @RequestParam(required = false) LocalDateTime startDate,
-        @RequestParam(required = false) LocalDateTime endDate,
+        @RequestParam(required = false) LocalDate startDate,
+        @RequestParam(required = false) LocalDate endDate,
         @RequestParam(required = false) List<UUID> walletIds,
         @RequestParam(required = false) List<UUID> categoryIds
     ) {
         UUID userId = userContext.getCurrentUserId();
         log.info("GET /api/v1/reports/summary - userId: {}", userId);
 
-        // Apply defaults if not provided
-        if (startDate == null) {
-            startDate = LocalDateTime.now().minusDays(30);
-        }
-        if (endDate == null) {
-            endDate = LocalDateTime.now();
-        }
+        // Apply defaults if not provided (using Jakarta timezone)
+        LocalDate start = startDate != null ? startDate : LocalDate.now(JAKARTA_ZONE).minusDays(30);
+        LocalDate end = endDate != null ? endDate : LocalDate.now(JAKARTA_ZONE);
+
+        // Convert LocalDate to LocalDateTime (start of day to end of day) in Jakarta timezone
+        LocalDateTime startDateTime = start.atStartOfDay();
+        // If end date is today or in the future, use current time in Jakarta timezone; otherwise use end of day
+        LocalDateTime endDateTime = end.isBefore(LocalDate.now(JAKARTA_ZONE))
+            ? end.atTime(23, 59, 59, 999999999)
+            : ZonedDateTime.now(JAKARTA_ZONE).toLocalDateTime();
 
         // Validate date range based on subscription tier
         boolean isPremium = subscriptionService.isPremiumUser(userId);
         if (isPremium) {
-            dateRangeValidator.validatePremiumTier(startDate, endDate);
+            dateRangeValidator.validatePremiumTier(startDateTime, endDateTime);
         } else {
-            dateRangeValidator.validateFreeTier(startDate, endDate);
+            dateRangeValidator.validateFreeTier(startDateTime, endDateTime);
         }
 
         ReportFilter filter = new ReportFilter(
-            startDate,
-            endDate,
+            startDateTime,
+            endDateTime,
             walletIds,
             categoryIds,
             null,  // type
@@ -97,7 +108,7 @@ public class ReportController {
      * Get income/expense trend data for charts.
      *
      * @param startDate optional start date (defaults to 30 days ago)
-     * @param endDate optional end date (defaults to now)
+     * @param endDate optional end date (defaults to today)
      * @param granularity data granularity (DAILY, WEEKLY, MONTHLY)
      * @param walletIds optional wallet filter
      * @return list of trend data points
@@ -108,33 +119,36 @@ public class ReportController {
         description = "Get time series data for income and expense trends. Returns daily data points that can be aggregated by granularity (DAILY, WEEKLY, MONTHLY)."
     )
     public ResponseEntity<List<TrendDataDto>> getTrend(
-        @RequestParam(required = false) LocalDateTime startDate,
-        @RequestParam(required = false) LocalDateTime endDate,
+        @RequestParam(required = false) LocalDate startDate,
+        @RequestParam(required = false) LocalDate endDate,
         @RequestParam(defaultValue = "DAILY") Granularity granularity,
         @RequestParam(required = false) List<UUID> walletIds
     ) {
         UUID userId = userContext.getCurrentUserId();
         log.info("GET /api/v1/reports/trend - userId: {}, granularity: {}", userId, granularity);
 
-        // Apply defaults if not provided
-        if (startDate == null) {
-            startDate = LocalDateTime.now().minusDays(30);
-        }
-        if (endDate == null) {
-            endDate = LocalDateTime.now();
-        }
+        // Apply defaults if not provided (using Jakarta timezone)
+        LocalDate start = startDate != null ? startDate : LocalDate.now(JAKARTA_ZONE).minusDays(30);
+        LocalDate end = endDate != null ? endDate : LocalDate.now(JAKARTA_ZONE);
+
+        // Convert LocalDate to LocalDateTime (start of day to end of day) in Jakarta timezone
+        LocalDateTime startDateTime = start.atStartOfDay();
+        // If end date is today or in the future, use current time in Jakarta timezone; otherwise use end of day
+        LocalDateTime endDateTime = end.isBefore(LocalDate.now(JAKARTA_ZONE))
+            ? end.atTime(23, 59, 59, 999999999)
+            : ZonedDateTime.now(JAKARTA_ZONE).toLocalDateTime();
 
         // Validate date range based on subscription tier
         boolean isPremium = subscriptionService.isPremiumUser(userId);
         if (isPremium) {
-            dateRangeValidator.validatePremiumTier(startDate, endDate);
+            dateRangeValidator.validatePremiumTier(startDateTime, endDateTime);
         } else {
-            dateRangeValidator.validateFreeTier(startDate, endDate);
+            dateRangeValidator.validateFreeTier(startDateTime, endDateTime);
         }
 
         ReportFilter filter = new ReportFilter(
-            startDate,
-            endDate,
+            startDateTime,
+            endDateTime,
             walletIds,
             null,  // categoryIds
             null,  // type
@@ -147,5 +161,75 @@ public class ReportController {
         log.info("Trend data generated: {} data points", trendData.size());
 
         return ResponseEntity.ok(trendData);
+    }
+
+    /**
+     * Get category breakdown for pie charts and category analysis.
+     *
+     * @param startDate optional start date (defaults to 30 days ago)
+     * @param endDate optional end date (defaults to today)
+     * @param type transaction type (INCOME or EXPENSE, defaults to EXPENSE)
+     * @param limit optional limit for top N categories (0 = all)
+     * @param walletIds optional wallet filter
+     * @return list of category breakdowns with percentages
+     */
+    @GetMapping("/category-breakdown")
+    @Operation(
+        summary = "Get category breakdown",
+        description = "Get category-wise spending/income analysis with percentages. " +
+            "Useful for pie charts and category comparison. " +
+            "Returns categories sorted by amount (highest first). " +
+            "Defaults to EXPENSE type if not specified."
+    )
+    public ResponseEntity<List<CategoryBreakdownDto>> getCategoryBreakdown(
+        @RequestParam(required = false) LocalDate startDate,
+        @RequestParam(required = false) LocalDate endDate,
+        @RequestParam(required = false, defaultValue = "EXPENSE") TransactionType type,
+        @RequestParam(required = false, defaultValue = "0") Integer limit,
+        @RequestParam(required = false) List<UUID> walletIds
+    ) {
+        UUID userId = userContext.getCurrentUserId();
+        log.info("GET /api/v1/reports/category-breakdown - userId: {}, type: {}", userId, type);
+
+        // Apply defaults if not provided (using Jakarta timezone)
+        LocalDate start = startDate != null ? startDate : LocalDate.now(JAKARTA_ZONE).minusDays(30);
+        LocalDate end = endDate != null ? endDate : LocalDate.now(JAKARTA_ZONE);
+
+        // Convert LocalDate to LocalDateTime (start of day to end of day) in Jakarta timezone
+        LocalDateTime startDateTime = start.atStartOfDay();
+        // If end date is today or in the future, use current time in Jakarta timezone; otherwise use end of day
+        LocalDateTime endDateTime = end.isBefore(LocalDate.now(JAKARTA_ZONE))
+            ? end.atTime(23, 59, 59, 999999999)
+            : ZonedDateTime.now(JAKARTA_ZONE).toLocalDateTime();
+
+        // Validate date range based on subscription tier
+        boolean isPremium = subscriptionService.isPremiumUser(userId);
+        if (isPremium) {
+            dateRangeValidator.validatePremiumTier(startDateTime, endDateTime);
+        } else {
+            dateRangeValidator.validateFreeTier(startDateTime, endDateTime);
+        }
+
+        ReportFilter filter = new ReportFilter(
+            startDateTime,
+            endDateTime,
+            walletIds,
+            null,  // categoryIds
+            null,  // type (handled separately)
+            0,     // page
+            100    // size
+        );
+
+        // Get breakdown (all or top N)
+        List<CategoryBreakdownDto> breakdown;
+        if (limit != null && limit > 0) {
+            breakdown = getCategoryBreakdown.getTopCategories(userId, filter, type, limit);
+            log.info("Top {} categories generated", limit);
+        } else {
+            breakdown = getCategoryBreakdown.get(userId, filter, type);
+            log.info("All categories breakdown generated: {} categories", breakdown.size());
+        }
+
+        return ResponseEntity.ok(breakdown);
     }
 }

@@ -206,12 +206,14 @@ Composables:
   - Payment history
 
 **GetCategoryBreakdown**
-- [ ] Create `GetCategoryBreakdown` interface
-  - Method: `List<CategoryBreakdownDto> get(UUID userId, ReportFilter filter)`
-- [ ] Implement `GetCategoryBreakdownUseCase`
+- [x] Create `GetCategoryBreakdown` interface
+  - Method: `List<CategoryBreakdownDto> get(UUID userId, ReportFilter filter, TransactionType type)`
+  - Method: `List<CategoryBreakdownDto> getTopCategories(..., int limit)`
+- [x] Implement `GetCategoryBreakdownUseCase`
   - Group by category with percentages
   - Return top N categories by amount
   - Calculate percentage of total
+  - Cached for 5 minutes
 
 #### Export Use Cases
 
@@ -315,9 +317,11 @@ Composables:
 - [ ] `GET /debts` - Get debt report
   - Query params: `type`, `status`, `includePayments`
   - Returns: `DebtReportResponse`
-- [ ] `GET /category-breakdown` - Category analysis
-  - Query params: `startDate`, `endDate`, `type`
+- [x] `GET /category-breakdown` - Category analysis
+  - Query params: `startDate`, `endDate`, `type`, `limit`, `walletIds`
   - Returns: `List<CategoryBreakdownDto>`
+  - Supports top N categories filtering
+  - Cached for 5 minutes
 - [x] `GET /trend` - Trend data for charts
   - Query params: `startDate`, `endDate`, `granularity`, `walletIds`
   - Returns: `List<TrendDataDto>`

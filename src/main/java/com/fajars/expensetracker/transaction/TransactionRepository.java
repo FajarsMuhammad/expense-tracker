@@ -1,6 +1,8 @@
 package com.fajars.expensetracker.transaction;
 
-import java.time.LocalDateTime;
+import com.fajars.expensetracker.transaction.projection.CategoryBreakdown;
+import com.fajars.expensetracker.transaction.projection.TransactionSummary;
+import com.fajars.expensetracker.transaction.projection.TrendData;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,7 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -128,7 +130,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             AND t.date <= :endDate
             AND (:walletIds IS NULL OR t.wallet.id IN :walletIds)
     """)
-    Object[] getSummaryByDateRange(
+    TransactionSummary getSummaryByDateRange(
         @Param("userId") UUID userId,
         @Param("startDate") LocalDateTime startDate,
         @Param("endDate") LocalDateTime endDate,
@@ -141,11 +143,11 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
      */
     @Query("""
         SELECT
-            c.id,
-            c.name,
-            t.type,
-            COALESCE(SUM(t.amount), 0),
-            COUNT(t)
+            c.id as categoryId,
+            c.name as categoryName,
+            t.type as type,
+            COALESCE(SUM(t.amount), 0) as totalAmount,
+            COUNT(t) as transactionCount
         FROM Transaction t
         JOIN t.category c
         WHERE t.user.id = :userId
@@ -156,7 +158,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
         GROUP BY c.id, c.name, t.type
         ORDER BY SUM(t.amount) DESC
     """)
-    List<Object[]> getCategoryBreakdown(
+    List<CategoryBreakdown> getCategoryBreakdown(
         @Param("userId") UUID userId,
         @Param("startDate") LocalDateTime startDate,
         @Param("endDate") LocalDateTime endDate,
@@ -170,18 +172,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
      */
     @Query("""
         SELECT
-            CAST(t.date AS date),
-            COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0),
-            COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)
+            CAST(t.date AS date) as date,
+            COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0) as totalIncome,
+            COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0) as totalExpense
         FROM Transaction t
         WHERE t.user.id = :userId
             AND t.date >= :startDate
             AND t.date <= :endDate
             AND (:walletIds IS NULL OR t.wallet.id IN :walletIds)
         GROUP BY CAST(t.date AS date)
-        ORDER BY CAST(t.date AS date)
+        ORDER BY CAST(t.date AS date) DESC
     """)
-    List<Object[]> getTrendData(
+    List<TrendData> getTrendData(
         @Param("userId") UUID userId,
         @Param("startDate") LocalDateTime startDate,
         @Param("endDate") LocalDateTime endDate,

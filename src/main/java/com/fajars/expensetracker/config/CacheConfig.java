@@ -40,7 +40,9 @@ public class CacheConfig {
     public CacheManager cacheManager() {
         CaffeineCacheManager cacheManager = new CaffeineCacheManager(
             "financialSummaries",
-            "trendData"
+            "trendData",
+            "categoryBreakdown",
+            "topCategories"
         );
 
         cacheManager.setCaffeine(Caffeine.newBuilder()

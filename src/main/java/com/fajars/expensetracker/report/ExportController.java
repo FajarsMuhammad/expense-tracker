@@ -22,7 +22,7 @@ import java.util.UUID;
  * - POST /api/v1/export/transactions - Export transactions in CSV/Excel/PDF
  */
 @RestController
-@RequestMapping("/api/v1/export")
+@RequestMapping("/export")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Export", description = "Data export in multiple formats")

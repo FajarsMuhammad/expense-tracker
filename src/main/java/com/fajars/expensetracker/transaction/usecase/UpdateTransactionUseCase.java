@@ -8,6 +8,8 @@ import com.fajars.expensetracker.transaction.*;
 import com.fajars.expensetracker.wallet.Wallet;
 import com.fajars.expensetracker.wallet.WalletRepository;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,6 +28,8 @@ public class UpdateTransactionUseCase implements UpdateTransaction {
     private final WalletRepository walletRepository;
     private final CategoryRepository categoryRepository;
     private final BusinessEventLogger businessEventLogger;
+
+    private static final ZoneId JAKARTA_ZONE = ZoneId.of("Asia/Jakarta");
 
     @Override
     @Transactional
@@ -89,8 +93,21 @@ public class UpdateTransactionUseCase implements UpdateTransaction {
         transaction.setType(request.type());
         transaction.setAmount(request.amount());
         transaction.setNote(request.note());
-        transaction.setDate(request.date());
-        transaction.setUpdatedAt(LocalDateTime.now());
+        // Convert transaction date to Jakarta timezone
+        transaction.setDate(convertToJakartaTime(request.date()));
+        // Use Jakarta timezone for audit timestamp
+        transaction.setUpdatedAt(ZonedDateTime.now(JAKARTA_ZONE).toLocalDateTime());
+    }
+
+    /**
+     * Convert LocalDateTime to Jakarta timezone.
+     * Assumes input is in UTC (from frontend's ISO format with Z suffix).
+     */
+    private LocalDateTime convertToJakartaTime(LocalDateTime utcDateTime) {
+        // Treat the LocalDateTime as UTC and convert to Jakarta
+        return utcDateTime.atZone(ZoneId.of("UTC"))
+            .withZoneSameInstant(JAKARTA_ZONE)
+            .toLocalDateTime();
     }
 
     private void logChanges(Transaction transaction, TransactionSnapshot snapshot) {
