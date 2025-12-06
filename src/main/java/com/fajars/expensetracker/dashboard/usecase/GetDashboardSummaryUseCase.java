@@ -38,18 +38,16 @@ public class GetDashboardSummaryUseCase implements GetDashboardSummary {
         ZoneId zoneId = ZoneId.systemDefault();
         LocalDate today = LocalDate.now(zoneId);
 
-        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime startOfDay = today.atStartOfDay().minusDays(6);
         LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
 
         List<Transaction> todayTransactions;
         if (walletId != null) {
-            todayTransactions = transactionRepository.findByUserIdAndWalletIdAndDateBetween(userId,
-                                                                                            walletId,
-                                                                                            startOfDay,
-                                                                                            endOfDay);
+            todayTransactions = transactionRepository
+                .findByUserIdAndWalletIdAndDateBetween(userId, walletId, startOfDay, endOfDay);
         } else {
-            todayTransactions = transactionRepository.findByUserIdAndDateBetween(userId, startOfDay,
-                                                                                 endOfDay);
+            todayTransactions = transactionRepository
+                .findByUserIdAndDateBetween(userId, startOfDay, endOfDay);
         }
 
         double todayIncome = todayTransactions.stream()
@@ -134,7 +132,7 @@ public class GetDashboardSummaryUseCase implements GetDashboardSummary {
         ZoneId zoneId = ZoneId.systemDefault();
         LocalDate today = LocalDate.now(zoneId);
 
-        LocalDateTime startDate = today.atStartOfDay();
+        LocalDateTime startDate = today.atStartOfDay().minusDays(6);
         LocalDateTime endDate = today.atTime(LocalTime.MAX);
 
         List<Transaction> weekTransactions;
