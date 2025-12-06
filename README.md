@@ -1945,4 +1945,4 @@ Special thanks to:
 
 **Last Updated**: December 6, 2024
 **Version**: 1.0.0-SNAPSHOT
-**Maintainer**: Fajar Sutiono
+**Maintainer**: Fajar Sudarmaji
