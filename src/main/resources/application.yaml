@@ -2,7 +2,7 @@ spring:
   application:
     name: expense-tracker
   datasource:
-    url: jdbc:postgresql://localhost:5432/expense_tracker
+    url: jdbc:postgresql://localhost:5432/expense_tracker?timezone=Asia/Jakarta
     username:
     password:
     driver-class-name: org.postgresql.Driver
@@ -12,6 +12,15 @@ spring:
     allow-unsupported-database: true
   profiles:
     active: dev
+  jackson:
+    time-zone: Asia/Jakarta
+    serialization:
+      write-dates-as-timestamps: false
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Jakarta
 
 server:
   port: 8081

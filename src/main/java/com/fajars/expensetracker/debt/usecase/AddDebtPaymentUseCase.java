@@ -35,6 +35,9 @@ public class AddDebtPaymentUseCase implements AddDebtPayment {
         long startTime = System.currentTimeMillis();
         log.debug("Adding payment to debt {} for user {}: {}", debtId, userId, request);
 
+        // Validate payment amount (use case responsibility)
+        validatePaymentAmount(request.amount());
+
         // Validate and get debt (ownership check)
         Debt debt = debtRepository.findByIdAndUserId(debtId, userId)
             .orElseThrow(() -> new ResourceNotFoundException("Debt", debtId.toString()));
@@ -98,6 +101,19 @@ public class AddDebtPaymentUseCase implements AddDebtPayment {
             return SecurityContextHolder.getContext().getAuthentication().getName();
         } catch (Exception e) {
             return "system";
+        }
+    }
+
+    /**
+     * Validate that payment amount is positive.
+     * This is a use case-level validation.
+     *
+     * @param amount the payment amount to validate
+     * @throws IllegalArgumentException if amount is null or not positive
+     */
+    private void validatePaymentAmount(Double amount) {
+        if (amount == null || amount <= 0) {
+            throw new IllegalArgumentException("Payment amount must be positive");
         }
     }
 }

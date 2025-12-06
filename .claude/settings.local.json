@@ -40,7 +40,8 @@
       "Bash(kill:*)",
       "Bash(find:*)",
       "Bash(tree:*)",
-      "Bash(docker build:*)"
+      "Bash(docker build:*)",
+      "Bash(xargs kill:*)"
     ],
     "deny": [],
     "ask": []

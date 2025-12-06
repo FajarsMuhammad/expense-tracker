@@ -1,5 +1,6 @@
 package com.fajars.expensetracker.transaction;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -31,7 +32,10 @@ public record UpdateTransactionRequest(
         String note,
 
         @NotNull(message = "Transaction date is required")
-        @Schema(description = "Transaction date", example = "2024-01-15T10:30:00.000Z", required = true)
+        @Schema(description = "Transaction date (will be converted to Jakarta timezone/WIB)",
+                example = "2024-01-15T10:30:00",
+                required = true)
+        @JsonFormat(shape = JsonFormat.Shape.STRING, timezone = "Asia/Jakarta")
         LocalDateTime date
 ) {
 }

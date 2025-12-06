@@ -14,6 +14,7 @@ import java.util.*;
 @Entity
 @Table(name = "debts", indexes = {
     @Index(name = "idx_debt_user_id", columnList = "user_id"),
+    @Index(name = "idx_debt_type", columnList = "type"),
     @Index(name = "idx_debt_status", columnList = "status"),
     @Index(name = "idx_debt_due_date", columnList = "due_date")
 })
@@ -33,6 +34,11 @@ public class Debt {
     @NotNull
     private User user;
 
+    @Enumerated(EnumType.STRING)
+    @NotNull
+    @Column(nullable = false, length = 20)
+    private DebtType type;
+
     @NotBlank
     @Size(max = 255)
     @Column(nullable = false)
@@ -48,13 +54,17 @@ public class Debt {
     @Column(nullable = false)
     private Double remainingAmount;
 
-    @Column(nullable = true)
+    @Column(nullable = false)
     private LocalDateTime dueDate;
 
     @Enumerated(EnumType.STRING)
     @NotNull
     @Column(nullable = false, length = 20)
     private DebtStatus status;
+
+    @Size(max = 500)
+    @Column(length = 500)
+    private String note;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -69,13 +79,12 @@ public class Debt {
     /**
      * Business rule: Apply a payment to this debt.
      * Updates remainingAmount and status based on payment.
+     * Note: Amount validation should be done at use case layer.
      *
-     * @param paymentAmount the amount being paid
-     * @throws IllegalArgumentException if payment amount is invalid
+     * @param paymentAmount the amount being paid (must be positive and validated)
+     * @throws IllegalArgumentException if payment amount exceeds remaining debt
      */
     public void applyPayment(Double paymentAmount) {
-        validatePaymentAmount(paymentAmount);
-
         double newRemainingAmount = this.remainingAmount - paymentAmount;
 
         if (newRemainingAmount < 0) {
@@ -106,15 +115,6 @@ public class Debt {
             this.status = DebtStatus.PARTIAL;
         } else {
             this.status = DebtStatus.OPEN;
-        }
-    }
-
-    /**
-     * Business rule: Validate payment amount is positive.
-     */
-    private void validatePaymentAmount(Double amount) {
-        if (amount == null || amount <= 0) {
-            throw new IllegalArgumentException("Payment amount must be positive");
         }
     }
 

@@ -34,6 +34,10 @@ public class ListDebtsUseCase implements ListDebts {
         // Apply filters
         if (filter.overdue() != null && filter.overdue()) {
             debts = debtRepository.findOverdueDebts(userId, LocalDateTime.now(), pageable);
+        } else if (filter.type() != null && filter.status() != null) {
+            debts = debtRepository.findByUserIdAndTypeAndStatus(userId, filter.type(), filter.status(), pageable);
+        } else if (filter.type() != null) {
+            debts = debtRepository.findByUserIdAndType(userId, filter.type(), pageable);
         } else if (filter.status() != null) {
             debts = debtRepository.findByUserIdAndStatus(userId, filter.status(), pageable);
         } else {

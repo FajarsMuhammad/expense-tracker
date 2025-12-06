@@ -54,11 +54,13 @@ public class CreateDebtUseCase implements CreateDebt {
         return Debt.builder()
             .id(UUID.randomUUID())
             .user(User.builder().id(userId).build())
+            .type(request.type())
             .counterpartyName(request.counterpartyName())
             .totalAmount(request.totalAmount())
             .remainingAmount(request.totalAmount()) // Initially, remaining = total
             .dueDate(request.dueDate())
             .status(DebtStatus.OPEN)
+            .note(request.note())
             .createdAt(now)
             .updatedAt(now)
             .build();

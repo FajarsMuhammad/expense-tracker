@@ -1,6 +1,8 @@
 package com.fajars.expensetracker.transaction;
 
-import java.time.LocalDateTime;
+import com.fajars.expensetracker.transaction.projection.CategoryBreakdown;
+import com.fajars.expensetracker.transaction.projection.TransactionSummary;
+import com.fajars.expensetracker.transaction.projection.TrendData;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,7 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -109,5 +111,82 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             @Param("walletId") UUID walletId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
+    );
+
+    // ===== REPORTING QUERIES =====
+
+    /**
+     * Get total income/expense summary for a date range.
+     * Optimized for reporting - returns aggregated data.
+     */
+    @Query("""
+        SELECT
+            COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0) as totalIncome,
+            COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0) as totalExpense,
+            COUNT(t) as transactionCount
+        FROM Transaction t
+        WHERE t.user.id = :userId
+            AND t.date >= :startDate
+            AND t.date <= :endDate
+            AND (:walletIds IS NULL OR t.wallet.id IN :walletIds)
+    """)
+    TransactionSummary getSummaryByDateRange(
+        @Param("userId") UUID userId,
+        @Param("startDate") LocalDateTime startDate,
+        @Param("endDate") LocalDateTime endDate,
+        @Param("walletIds") List<UUID> walletIds
+    );
+
+    /**
+     * Get category breakdown for reports.
+     * Groups transactions by category with totals and counts.
+     */
+    @Query("""
+        SELECT
+            c.id as categoryId,
+            c.name as categoryName,
+            t.type as type,
+            COALESCE(SUM(t.amount), 0) as totalAmount,
+            COUNT(t) as transactionCount
+        FROM Transaction t
+        JOIN t.category c
+        WHERE t.user.id = :userId
+            AND t.date >= :startDate
+            AND t.date <= :endDate
+            AND t.type = :type
+            AND (:walletIds IS NULL OR t.wallet.id IN :walletIds)
+        GROUP BY c.id, c.name, t.type
+        ORDER BY SUM(t.amount) DESC
+    """)
+    List<CategoryBreakdown> getCategoryBreakdown(
+        @Param("userId") UUID userId,
+        @Param("startDate") LocalDateTime startDate,
+        @Param("endDate") LocalDateTime endDate,
+        @Param("type") TransactionType type,
+        @Param("walletIds") List<UUID> walletIds
+    );
+
+    /**
+     * Get trend data for charts (grouped by date).
+     * Returns daily income/expense for the specified period.
+     */
+    @Query("""
+        SELECT
+            CAST(t.date AS date) as date,
+            COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0) as totalIncome,
+            COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0) as totalExpense
+        FROM Transaction t
+        WHERE t.user.id = :userId
+            AND t.date >= :startDate
+            AND t.date <= :endDate
+            AND (:walletIds IS NULL OR t.wallet.id IN :walletIds)
+        GROUP BY CAST(t.date AS date)
+        ORDER BY CAST(t.date AS date) DESC
+    """)
+    List<TrendData> getTrendData(
+        @Param("userId") UUID userId,
+        @Param("startDate") LocalDateTime startDate,
+        @Param("endDate") LocalDateTime endDate,
+        @Param("walletIds") List<UUID> walletIds
     );
 }

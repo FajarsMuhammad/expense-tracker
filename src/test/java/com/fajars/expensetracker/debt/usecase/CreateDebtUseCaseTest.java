@@ -46,6 +46,7 @@ class CreateDebtUseCaseTest {
         // Arrange
         LocalDateTime dueDate = LocalDateTime.now().plusDays(30);
         CreateDebtRequest request = new CreateDebtRequest(
+            DebtType.PAYABLE,
             "John Doe",
             1000.0,
             dueDate,
@@ -55,11 +56,13 @@ class CreateDebtUseCaseTest {
         Debt savedDebt = Debt.builder()
             .id(UUID.randomUUID())
             .user(User.builder().id(userId).build())
+            .type(DebtType.PAYABLE)
             .counterpartyName("John Doe")
             .totalAmount(1000.0)
             .remainingAmount(1000.0)
             .dueDate(dueDate)
             .status(DebtStatus.OPEN)
+            .note("Business loan")
             .createdAt(LocalDateTime.now())
             .updatedAt(LocalDateTime.now())
             .build();
@@ -85,10 +88,12 @@ class CreateDebtUseCaseTest {
     @Test
     void create_ShouldSetStatusToOpen_WhenCreated() {
         // Arrange
+        LocalDateTime dueDate = LocalDateTime.now().plusDays(30);
         CreateDebtRequest request = new CreateDebtRequest(
+            DebtType.RECEIVABLE,
             "Jane Smith",
             500.0,
-            null,
+            dueDate,
             null
         );
 
@@ -107,10 +112,12 @@ class CreateDebtUseCaseTest {
     @Test
     void create_ShouldSetRemainingAmountEqualToTotalAmount() {
         // Arrange
+        LocalDateTime dueDate = LocalDateTime.now().plusDays(30);
         CreateDebtRequest request = new CreateDebtRequest(
+            DebtType.PAYABLE,
             "Test User",
             750.0,
-            null,
+            dueDate,
             null
         );
 
@@ -127,12 +134,14 @@ class CreateDebtUseCaseTest {
     }
 
     @Test
-    void create_ShouldHandleNullDueDate() {
+    void create_ShouldHandleNullNote() {
         // Arrange
+        LocalDateTime dueDate = LocalDateTime.now().plusDays(30);
         CreateDebtRequest request = new CreateDebtRequest(
+            DebtType.PAYABLE,
             "Test User",
             1000.0,
-            null,
+            dueDate,
             null
         );
 
@@ -143,16 +152,18 @@ class CreateDebtUseCaseTest {
 
         // Assert
         assertNotNull(result);
-        assertNull(result.dueDate());
+        assertNull(result.note());
     }
 
     @Test
     void create_ShouldRecordMetrics() {
         // Arrange
+        LocalDateTime dueDate = LocalDateTime.now().plusDays(30);
         CreateDebtRequest request = new CreateDebtRequest(
+            DebtType.PAYABLE,
             "Test User",
             1000.0,
-            null,
+            dueDate,
             null
         );
 

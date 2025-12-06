@@ -8,6 +8,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Schema(description = "Filter criteria for debt queries")
 public record DebtFilter(
 
+    @Schema(description = "Filter by debt type (PAYABLE or RECEIVABLE)", example = "PAYABLE")
+    DebtType type,
+
     @Schema(description = "Filter by debt status", example = "OPEN")
     DebtStatus status,
 
@@ -25,5 +28,6 @@ public record DebtFilter(
         // Provide defaults
         page = (page == null || page < 0) ? 0 : page;
         size = (size == null || size <= 0 || size > 100) ? 20 : size;
+        overdue = overdue != null && overdue;
     }
 }

@@ -11,6 +11,10 @@ import java.time.LocalDateTime;
 @Schema(description = "Request to create a new debt")
 public record CreateDebtRequest(
 
+    @NotNull(message = "Debt type is required")
+    @Schema(description = "Type of debt: PAYABLE (you owe) or RECEIVABLE (owed to you)", example = "PAYABLE")
+    DebtType type,
+
     @NotBlank(message = "Counterparty name is required")
     @Size(max = 255, message = "Counterparty name must not exceed 255 characters")
     @Schema(description = "Name of the person or entity involved in the debt", example = "John Doe")
@@ -21,7 +25,8 @@ public record CreateDebtRequest(
     @Schema(description = "Total amount of the debt", example = "1000.00")
     Double totalAmount,
 
-    @Schema(description = "Due date for the debt (optional)", example = "2025-12-31T23:59:59")
+    @NotNull(message = "Due date is required")
+    @Schema(description = "Due date for the debt", example = "2025-12-31T23:59:59")
     LocalDateTime dueDate,
 
     @Size(max = 500, message = "Note must not exceed 500 characters")

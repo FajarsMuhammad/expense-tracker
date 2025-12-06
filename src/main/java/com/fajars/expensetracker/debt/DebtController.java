@@ -40,6 +40,7 @@ import java.util.UUID;
 public class DebtController {
 
     private final CreateDebt createDebt;
+    private final UpdateDebt updateDebt;
     private final AddDebtPayment addDebtPayment;
     private final MarkDebtAsPaid markDebtAsPaid;
     private final GetDebtDetail getDebtDetail;
@@ -83,6 +84,9 @@ public class DebtController {
     })
     @GetMapping
     public ResponseEntity<Page<DebtResponse>> listDebts(
+        @Parameter(description = "Filter by debt type (PAYABLE, RECEIVABLE)", required = false)
+        @RequestParam(required = false) DebtType type,
+
         @Parameter(description = "Filter by debt status (OPEN, PARTIAL, PAID)", required = false)
         @RequestParam(required = false) DebtStatus status,
 
@@ -96,7 +100,7 @@ public class DebtController {
         @RequestParam(required = false, defaultValue = "20") Integer size
     ) {
         UUID userId = getCurrentUserId();
-        DebtFilter filter = new DebtFilter(status, overdue, page, size);
+        DebtFilter filter = new DebtFilter(type, status, overdue, page, size);
 
         log.debug("Listing debts for user {} with filter: {}", userId, filter);
         Page<DebtResponse> debts = listDebts.list(userId, filter);
@@ -122,6 +126,34 @@ public class DebtController {
         log.debug("Getting debt {} for user {}", id, userId);
 
         DebtDetailResponse debt = getDebtDetail.getDetail(userId, id);
+        return ResponseEntity.ok(debt);
+    }
+
+    @Operation(
+        summary = "Update a debt",
+        description = "Update an existing debt record. User must own the debt."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Debt updated successfully",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = DebtResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Bad Request - Invalid input or total amount less than paid amount", content = @Content),
+        @ApiResponse(responseCode = "404", description = "Debt not found", content = @Content),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing JWT token", content = @Content)
+    })
+    @PutMapping("/{id}")
+    public ResponseEntity<DebtResponse> updateDebt(
+        @Parameter(description = "Debt ID", required = true) @PathVariable UUID id,
+        @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "Debt update request",
+            required = true,
+            content = @Content(schema = @Schema(implementation = UpdateDebtRequest.class))
+        )
+        @Valid @RequestBody UpdateDebtRequest request
+    ) {
+        UUID userId = getCurrentUserId();
+        log.debug("Updating debt {} for user {}: {}", id, userId, request);
+
+        DebtResponse debt = updateDebt.update(userId, id, request);
         return ResponseEntity.ok(debt);
     }
 
@@ -163,7 +195,7 @@ public class DebtController {
         @ApiResponse(responseCode = "404", description = "Debt not found", content = @Content),
         @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content)
     })
-    @PatchMapping("/{id}/mark-paid")
+    @PostMapping("/{id}/mark-paid")
     public ResponseEntity<DebtResponse> markAsPaid(
         @Parameter(description = "Debt ID", required = true) @PathVariable UUID id
     ) {

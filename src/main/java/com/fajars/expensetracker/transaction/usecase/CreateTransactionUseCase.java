@@ -14,6 +14,8 @@ import com.fajars.expensetracker.wallet.Wallet;
 import com.fajars.expensetracker.wallet.WalletRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,6 +35,8 @@ public class CreateTransactionUseCase implements CreateTransaction {
     private final CategoryRepository categoryRepository;
     private final MetricsService metricsService;
     private final BusinessEventLogger businessEventLogger;
+
+    private static final ZoneId JAKARTA_ZONE = ZoneId.of("Asia/Jakarta");
 
     @Override
     @Transactional
@@ -74,7 +78,13 @@ public class CreateTransactionUseCase implements CreateTransaction {
         UUID userId, CreateTransactionRequest request,
         Wallet wallet, Category category
     ) {
-        LocalDateTime now = LocalDateTime.now();
+        // Use Jakarta timezone for audit timestamps
+        LocalDateTime now = ZonedDateTime.now(JAKARTA_ZONE).toLocalDateTime();
+
+        // Convert transaction date to Jakarta timezone
+        // Request date comes from frontend, needs to be converted to Jakarta timezone
+        LocalDateTime transactionDate = convertToJakartaTime(request.date());
+
         return Transaction.builder()
             .id(UUID.randomUUID())
             .user(User.builder().id(userId).build())
@@ -83,10 +93,21 @@ public class CreateTransactionUseCase implements CreateTransaction {
             .type(request.type())
             .amount(request.amount())
             .note(request.note())
-            .date(request.date())
+            .date(transactionDate)
             .createdAt(now)
             .updatedAt(now)
             .build();
+    }
+
+    /**
+     * Convert LocalDateTime to Jakarta timezone.
+     * Assumes input is in UTC (from frontend's ISO format with Z suffix).
+     */
+    private LocalDateTime convertToJakartaTime(LocalDateTime utcDateTime) {
+        // Treat the LocalDateTime as UTC and convert to Jakarta
+        return utcDateTime.atZone(ZoneId.of("UTC"))
+            .withZoneSameInstant(JAKARTA_ZONE)
+            .toLocalDateTime();
     }
 
     private void logBusinessEvent(Transaction transaction) {
