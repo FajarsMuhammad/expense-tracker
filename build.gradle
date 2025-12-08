@@ -56,6 +56,10 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-cache'
 	implementation 'com.github.ben-manes.caffeine:caffeine'
 
+	// Payment Integration
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'  // WebClient for Midtrans API
+	implementation 'io.hypersistence:hypersistence-utils-hibernate-63:3.7.3'  // JSONB support for PostgreSQL
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

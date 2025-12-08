@@ -36,6 +36,14 @@ public class BusinessException extends RuntimeException {
         return new BusinessException(message, HttpStatus.BAD_REQUEST);
     }
 
+    public static BusinessException notFound(String message) {
+        return new BusinessException(message, HttpStatus.NOT_FOUND);
+    }
+
+    public static BusinessException forbidden(String message) {
+        return new BusinessException(message, HttpStatus.FORBIDDEN);
+    }
+
     public static BusinessException conflict(String message) {
         return new BusinessException(message, HttpStatus.CONFLICT);
     }

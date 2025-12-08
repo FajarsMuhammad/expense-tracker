@@ -34,6 +34,15 @@ server:
 jwt:
   secret: change_this_to_a_secure_base64_key
 
+# Midtrans Payment Gateway Configuration
+# Get your keys from: https://dashboard.midtrans.com/ (Account > Access Keys)
+# Sandbox for testing, Production for live transactions
+midtrans:
+  server-key: ${MIDTRANS_SERVER_KEY:SB-Mid-server-YOUR_SANDBOX_SERVER_KEY}
+  client-key: ${MIDTRANS_CLIENT_KEY:SB-Mid-client-YOUR_SANDBOX_CLIENT_KEY}
+  api-url: ${MIDTRANS_API_URL:https://app.sandbox.midtrans.com}
+  is-production: ${MIDTRANS_IS_PRODUCTION:false}
+
 # Spring Boot Actuator
 management:
   endpoints:

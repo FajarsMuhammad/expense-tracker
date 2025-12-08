@@ -224,6 +224,50 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle external service exceptions (payment gateway, etc.)
+     */
+    @ExceptionHandler(ExternalServiceException.class)
+    public ResponseEntity<ErrorResponse> handleExternalServiceException(
+            ExternalServiceException ex,
+            HttpServletRequest request) {
+
+        log.error("External service error on {}: {}", request.getRequestURI(), ex.getMessage(), ex);
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(java.time.LocalDateTime.now().toString())
+                .status(HttpStatus.BAD_GATEWAY.value())
+                .error("External Service Error")
+                .message("Payment service is temporarily unavailable. Please try again later.")
+                .path(request.getRequestURI())
+                .correlationId(MDC.get(CORRELATION_ID_KEY))
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
+    }
+
+    /**
+     * Handle rate limit exceeded exceptions
+     */
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimitExceeded(
+            RateLimitExceededException ex,
+            HttpServletRequest request) {
+
+        log.warn("Rate limit exceeded on {}: {}", request.getRequestURI(), ex.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(java.time.LocalDateTime.now().toString())
+                .status(HttpStatus.TOO_MANY_REQUESTS.value())
+                .error("Rate Limit Exceeded")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .correlationId(MDC.get(CORRELATION_ID_KEY))
+                .build();
+
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorResponse);
+    }
+
+    /**
      * Handle all other exceptions
      */
     @ExceptionHandler(Exception.class)

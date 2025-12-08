@@ -6,7 +6,7 @@ import com.fajars.expensetracker.report.*;
 import com.fajars.expensetracker.report.export.CsvExporter;
 import com.fajars.expensetracker.report.export.ExcelExporter;
 import com.fajars.expensetracker.report.export.PdfExporter;
-import com.fajars.expensetracker.subscription.SubscriptionService;
+import com.fajars.expensetracker.subscription.SubscriptionHelper;
 import com.fajars.expensetracker.transaction.Transaction;
 import com.fajars.expensetracker.transaction.TransactionRepository;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +42,7 @@ public class ExportTransactionsUseCase implements ExportTransactions {
     private final PdfExporter pdfExporter;
     private final MetricsService metricsService;
     private final BusinessEventLogger businessEventLogger;
-    private final SubscriptionService subscriptionService;
+    private final SubscriptionHelper subscriptionHelper;
 
     @Override
     @Transactional(readOnly = true)
@@ -54,7 +54,7 @@ public class ExportTransactionsUseCase implements ExportTransactions {
         validateExportQuota(userId, request);
 
         // 2. Fetch transactions with filter
-        List<Transaction> transactions = fetchTransactions(userId, request.filter());
+        List<Transaction> transactions = fetchTransactions(userId, request);
 
         // 3. Generate file based on format
         byte[] fileContent = generateFile(transactions, request.format());
@@ -96,8 +96,8 @@ public class ExportTransactionsUseCase implements ExportTransactions {
      * Premium users: up to 10,000 records
      */
     private void validateExportQuota(UUID userId, ExportRequest request) {
-        boolean isPremium = subscriptionService.isPremiumUser(userId);
-        int exportLimit = subscriptionService.getExportLimit(userId);
+        boolean isPremium = subscriptionHelper.isPremiumUser(userId);
+        int exportLimit = subscriptionHelper.getExportLimit(userId);
 
         log.debug("Export quota for user {}: {} (premium: {})", userId, exportLimit, isPremium);
 
@@ -107,8 +107,8 @@ public class ExportTransactionsUseCase implements ExportTransactions {
     /**
      * Fetch transactions based on filter criteria.
      */
-    private List<Transaction> fetchTransactions(UUID userId, ReportFilter filter) {
-        int exportLimit = subscriptionService.getExportLimit(userId);
+    private List<Transaction> fetchTransactions(UUID userId, ExportRequest filter) {
+        int exportLimit = subscriptionHelper.getExportLimit(userId);
 
         if (filter == null) {
             // Default filter: last 30 days
@@ -130,8 +130,8 @@ public class ExportTransactionsUseCase implements ExportTransactions {
 
         Page<Transaction> page = transactionRepository.findByUserIdWithFilters(
             userId,
-            filter.hasWalletFilter() && !filter.walletIds().isEmpty() ? filter.walletIds().get(0) : null,
-            filter.hasCategoryFilter() && !filter.categoryIds().isEmpty() ? filter.categoryIds().get(0) : null,
+            filter.hasWalletFilter() && !filter.walletIds().isEmpty() ? filter.walletIds().getFirst() : null,
+            filter.hasCategoryFilter() && !filter.categoryIds().isEmpty() ? filter.categoryIds().getFirst() : null,
             filter.hasTypeFilter() ? com.fajars.expensetracker.transaction.TransactionType.valueOf(filter.type()) : null,
             filter.startDate(),
             filter.endDate(),

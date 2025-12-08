@@ -1,17 +1,18 @@
 package com.fajars.expensetracker.report;
 
-import com.fajars.expensetracker.common.security.UserContext;
+import com.fajars.expensetracker.auth.UserIdentity;
 import com.fajars.expensetracker.common.validation.DateRangeValidator;
 import com.fajars.expensetracker.report.usecase.GenerateFinancialSummary;
 import com.fajars.expensetracker.report.usecase.GetCategoryBreakdown;
 import com.fajars.expensetracker.report.usecase.GetIncomeExpenseTrend;
-import com.fajars.expensetracker.subscription.SubscriptionService;
+import com.fajars.expensetracker.subscription.SubscriptionHelper;
 import com.fajars.expensetracker.transaction.TransactionType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -23,10 +24,9 @@ import java.util.UUID;
 
 /**
  * REST controller for financial reports and analytics.
- *
- * Endpoints:
- * - GET /api/v1/reports/summary - Financial summary with category breakdown
- * - GET /api/v1/reports/trend - Income/expense trend data for charts
+ * <p>
+ * Endpoints: - GET /api/v1/reports/summary - Financial summary with category breakdown - GET
+ * /api/v1/reports/trend - Income/expense trend data for charts
  */
 @RestController
 @RequestMapping("/reports")
@@ -38,18 +38,17 @@ public class ReportController {
     private final GenerateFinancialSummary generateFinancialSummary;
     private final GetIncomeExpenseTrend getIncomeExpenseTrend;
     private final GetCategoryBreakdown getCategoryBreakdown;
-    private final UserContext userContext;
     private final DateRangeValidator dateRangeValidator;
-    private final SubscriptionService subscriptionService;
+    private final SubscriptionHelper subscriptionHelper;
 
     private static final ZoneId JAKARTA_ZONE = ZoneId.of("Asia/Jakarta");
 
     /**
      * Get financial summary report with category breakdown and wallet balances.
      *
-     * @param startDate optional start date (defaults to 30 days ago)
-     * @param endDate optional end date (defaults to today)
-     * @param walletIds optional wallet filter
+     * @param startDate   optional start date (defaults to 30 days ago)
+     * @param endDate     optional end date (defaults to today)
+     * @param walletIds   optional wallet filter
      * @param categoryIds optional category filter
      * @return financial summary response
      */
@@ -59,12 +58,13 @@ public class ReportController {
         description = "Get comprehensive financial summary including total income, expenses, category breakdown, and wallet balances. Defaults to last 30 days if no dates provided."
     )
     public ResponseEntity<FinancialSummaryResponse> getFinancialSummary(
+        @AuthenticationPrincipal UserIdentity userIdentity,
         @RequestParam(required = false) LocalDate startDate,
         @RequestParam(required = false) LocalDate endDate,
         @RequestParam(required = false) List<UUID> walletIds,
         @RequestParam(required = false) List<UUID> categoryIds
     ) {
-        UUID userId = userContext.getCurrentUserId();
+        UUID userId = userIdentity.getUserId();
         log.info("GET /api/v1/reports/summary - userId: {}", userId);
 
         // Apply defaults if not provided (using Jakarta timezone)
@@ -79,7 +79,7 @@ public class ReportController {
             : ZonedDateTime.now(JAKARTA_ZONE).toLocalDateTime();
 
         // Validate date range based on subscription tier
-        boolean isPremium = subscriptionService.isPremiumUser(userId);
+        boolean isPremium = subscriptionHelper.isPremiumUser(userId);
         if (isPremium) {
             dateRangeValidator.validatePremiumTier(startDateTime, endDateTime);
         } else {
@@ -99,7 +99,7 @@ public class ReportController {
         FinancialSummaryResponse response = generateFinancialSummary.generate(userId, filter);
 
         log.info("Financial summary generated: {} transactions, netBalance: {}",
-            response.transactionCount(), response.netBalance());
+                 response.transactionCount(), response.netBalance());
 
         return ResponseEntity.ok(response);
     }
@@ -107,10 +107,10 @@ public class ReportController {
     /**
      * Get income/expense trend data for charts.
      *
-     * @param startDate optional start date (defaults to 30 days ago)
-     * @param endDate optional end date (defaults to today)
+     * @param startDate   optional start date (defaults to 30 days ago)
+     * @param endDate     optional end date (defaults to today)
      * @param granularity data granularity (DAILY, WEEKLY, MONTHLY)
-     * @param walletIds optional wallet filter
+     * @param walletIds   optional wallet filter
      * @return list of trend data points
      */
     @GetMapping("/trend")
@@ -119,12 +119,13 @@ public class ReportController {
         description = "Get time series data for income and expense trends. Returns daily data points that can be aggregated by granularity (DAILY, WEEKLY, MONTHLY)."
     )
     public ResponseEntity<List<TrendDataDto>> getTrend(
+        @AuthenticationPrincipal UserIdentity userIdentity,
         @RequestParam(required = false) LocalDate startDate,
         @RequestParam(required = false) LocalDate endDate,
         @RequestParam(defaultValue = "DAILY") Granularity granularity,
         @RequestParam(required = false) List<UUID> walletIds
     ) {
-        UUID userId = userContext.getCurrentUserId();
+        UUID userId = userIdentity.getUserId();
         log.info("GET /api/v1/reports/trend - userId: {}, granularity: {}", userId, granularity);
 
         // Apply defaults if not provided (using Jakarta timezone)
@@ -139,7 +140,7 @@ public class ReportController {
             : ZonedDateTime.now(JAKARTA_ZONE).toLocalDateTime();
 
         // Validate date range based on subscription tier
-        boolean isPremium = subscriptionService.isPremiumUser(userId);
+        boolean isPremium = subscriptionHelper.isPremiumUser(userId);
         if (isPremium) {
             dateRangeValidator.validatePremiumTier(startDateTime, endDateTime);
         } else {
@@ -167,9 +168,9 @@ public class ReportController {
      * Get category breakdown for pie charts and category analysis.
      *
      * @param startDate optional start date (defaults to 30 days ago)
-     * @param endDate optional end date (defaults to today)
-     * @param type transaction type (INCOME or EXPENSE, defaults to EXPENSE)
-     * @param limit optional limit for top N categories (0 = all)
+     * @param endDate   optional end date (defaults to today)
+     * @param type      transaction type (INCOME or EXPENSE, defaults to EXPENSE)
+     * @param limit     optional limit for top N categories (0 = all)
      * @param walletIds optional wallet filter
      * @return list of category breakdowns with percentages
      */
@@ -182,13 +183,14 @@ public class ReportController {
             "Defaults to EXPENSE type if not specified."
     )
     public ResponseEntity<List<CategoryBreakdownDto>> getCategoryBreakdown(
+        @AuthenticationPrincipal UserIdentity userIdentity,
         @RequestParam(required = false) LocalDate startDate,
         @RequestParam(required = false) LocalDate endDate,
         @RequestParam(required = false, defaultValue = "EXPENSE") TransactionType type,
         @RequestParam(required = false, defaultValue = "0") Integer limit,
         @RequestParam(required = false) List<UUID> walletIds
     ) {
-        UUID userId = userContext.getCurrentUserId();
+        UUID userId = userIdentity.getUserId();
         log.info("GET /api/v1/reports/category-breakdown - userId: {}, type: {}", userId, type);
 
         // Apply defaults if not provided (using Jakarta timezone)
@@ -203,7 +205,7 @@ public class ReportController {
             : ZonedDateTime.now(JAKARTA_ZONE).toLocalDateTime();
 
         // Validate date range based on subscription tier
-        boolean isPremium = subscriptionService.isPremiumUser(userId);
+        boolean isPremium = subscriptionHelper.isPremiumUser(userId);
         if (isPremium) {
             dateRangeValidator.validatePremiumTier(startDateTime, endDateTime);
         } else {
@@ -225,11 +227,12 @@ public class ReportController {
         if (limit != null && limit > 0) {
             breakdown = getCategoryBreakdown.getTopCategories(userId, filter, type, limit);
             log.info("Top {} categories generated", limit);
+            return ResponseEntity.ok(breakdown);
         } else {
             breakdown = getCategoryBreakdown.get(userId, filter, type);
             log.info("All categories breakdown generated: {} categories", breakdown.size());
+            return ResponseEntity.ok(breakdown);
         }
 
-        return ResponseEntity.ok(breakdown);
     }
 }
