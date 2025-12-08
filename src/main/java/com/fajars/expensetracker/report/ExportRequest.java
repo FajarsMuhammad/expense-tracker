@@ -18,6 +18,6 @@ public record ExportRequest(
     ExportType type,
 
     @Schema(description = "Filter criteria for the export")
-    ReportFilter filter
+    ExportFilter filter
 ) {
 }

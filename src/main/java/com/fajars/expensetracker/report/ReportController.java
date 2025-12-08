@@ -1,6 +1,8 @@
 package com.fajars.expensetracker.report;
 
 import com.fajars.expensetracker.auth.UserIdentity;
+import com.fajars.expensetracker.common.exception.BusinessException;
+import com.fajars.expensetracker.common.ratelimit.ReportFrequencyLimiter;
 import com.fajars.expensetracker.common.validation.DateRangeValidator;
 import com.fajars.expensetracker.report.usecase.GenerateFinancialSummary;
 import com.fajars.expensetracker.report.usecase.GetCategoryBreakdown;
@@ -40,6 +42,7 @@ public class ReportController {
     private final GetCategoryBreakdown getCategoryBreakdown;
     private final DateRangeValidator dateRangeValidator;
     private final SubscriptionHelper subscriptionHelper;
+    private final ReportFrequencyLimiter reportFrequencyLimiter;
 
     private static final ZoneId JAKARTA_ZONE = ZoneId.of("Asia/Jakarta");
 
@@ -66,6 +69,9 @@ public class ReportController {
     ) {
         UUID userId = userIdentity.getUserId();
         log.info("GET /api/v1/reports/summary - userId: {}", userId);
+
+        // Check report frequency limit for FREE tier users
+        checkReportFrequencyLimit(userId);
 
         // Apply defaults if not provided (using Jakarta timezone)
         LocalDate start = startDate != null ? startDate : LocalDate.now(JAKARTA_ZONE).minusDays(30);
@@ -127,6 +133,9 @@ public class ReportController {
     ) {
         UUID userId = userIdentity.getUserId();
         log.info("GET /api/v1/reports/trend - userId: {}, granularity: {}", userId, granularity);
+
+        // Check report frequency limit for FREE tier users
+        checkReportFrequencyLimit(userId);
 
         // Apply defaults if not provided (using Jakarta timezone)
         LocalDate start = startDate != null ? startDate : LocalDate.now(JAKARTA_ZONE).minusDays(30);
@@ -193,6 +202,9 @@ public class ReportController {
         UUID userId = userIdentity.getUserId();
         log.info("GET /api/v1/reports/category-breakdown - userId: {}, type: {}", userId, type);
 
+        // Check report frequency limit for FREE tier users
+        checkReportFrequencyLimit(userId);
+
         // Apply defaults if not provided (using Jakarta timezone)
         LocalDate start = startDate != null ? startDate : LocalDate.now(JAKARTA_ZONE).minusDays(30);
         LocalDate end = endDate != null ? endDate : LocalDate.now(JAKARTA_ZONE);
@@ -234,5 +246,29 @@ public class ReportController {
             return ResponseEntity.ok(breakdown);
         }
 
+    }
+
+    /**
+     * Check report frequency limit for FREE tier users.
+     * PREMIUM users bypass this check.
+     *
+     * @param userId User ID
+     * @throws BusinessException if FREE user exceeded daily report limit
+     */
+    private void checkReportFrequencyLimit(UUID userId) {
+        // PREMIUM users have unlimited reports
+        if (subscriptionHelper.isPremiumUser(userId)) {
+            return;
+        }
+
+        // Check if FREE user can generate another report today
+        if (!reportFrequencyLimiter.allowReport(userId)) {
+            int remaining = reportFrequencyLimiter.getRemainingReports(userId);
+            throw BusinessException.tooManyRequests(
+                    "You have exceeded the daily limit of 10 reports for FREE tier. " +
+                    "Remaining: " + remaining + ". " +
+                    "Upgrade to PREMIUM for unlimited reports or try again tomorrow."
+            );
+        }
     }
 }

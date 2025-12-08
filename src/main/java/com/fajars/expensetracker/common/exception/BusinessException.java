@@ -51,4 +51,8 @@ public class BusinessException extends RuntimeException {
     public static BusinessException unprocessable(String message) {
         return new BusinessException(message, HttpStatus.UNPROCESSABLE_ENTITY);
     }
+
+    public static BusinessException tooManyRequests(String message) {
+        return new BusinessException(message, HttpStatus.TOO_MANY_REQUESTS);
+    }
 }

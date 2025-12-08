@@ -53,8 +53,9 @@ public class ExportTransactionsUseCase implements ExportTransactions {
         // 1. Validate export quota (TODO: implement premium check)
         validateExportQuota(userId, request);
 
-        // 2. Fetch transactions with filter
-        List<Transaction> transactions = fetchTransactions(userId, request.filter());
+        // 2. Convert ExportFilter to ReportFilter and fetch transactions
+        ReportFilter reportFilter = convertToReportFilter(userId, request.filter());
+        List<Transaction> transactions = fetchTransactions(userId, reportFilter);
 
         // 3. Generate file based on format
         byte[] fileContent = generateFile(transactions, request.format());
@@ -91,6 +92,41 @@ public class ExportTransactionsUseCase implements ExportTransactions {
     }
 
     /**
+     * Convert ExportFilter to ReportFilter with export-specific settings.
+     */
+    private ReportFilter convertToReportFilter(UUID userId, ExportFilter exportFilter) {
+        int exportLimit = subscriptionHelper.getExportLimit(userId);
+
+        // Handle null filter - default to last 30 days
+        if (exportFilter == null) {
+            return new ReportFilter(
+                LocalDateTime.now().minusDays(30),
+                LocalDateTime.now(),
+                null, null, null, 0, exportLimit
+            );
+        }
+
+        // Convert LocalDate to LocalDateTime
+        LocalDateTime startDateTime = exportFilter.startDate() != null
+            ? exportFilter.startDate().atStartOfDay()
+            : LocalDateTime.now().minusDays(30);
+
+        LocalDateTime endDateTime = exportFilter.endDate() != null
+            ? exportFilter.endDate().atTime(23, 59, 59)
+            : LocalDateTime.now();
+
+        return new ReportFilter(
+            startDateTime,
+            endDateTime,
+            exportFilter.walletIds(),
+            exportFilter.categoryIds(),
+            exportFilter.type(),
+            0,  // page - always start from first page for export
+            exportLimit  // size - use export limit
+        );
+    }
+
+    /**
      * Validate export quota based on user subscription tier.
      * Free users: limited to 100 records
      * Premium users: up to 10,000 records
@@ -109,15 +145,6 @@ public class ExportTransactionsUseCase implements ExportTransactions {
      */
     private List<Transaction> fetchTransactions(UUID userId, ReportFilter filter) {
         int exportLimit = subscriptionHelper.getExportLimit(userId);
-
-        if (filter == null) {
-            // Default filter: last 30 days
-            filter = new ReportFilter(
-                LocalDateTime.now().minusDays(30),
-                LocalDateTime.now(),
-                null, null, null, 0, exportLimit
-            );
-        }
 
         // Apply export limit to page size
         int maxSize = Math.min(filter.size(), exportLimit);
