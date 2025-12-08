@@ -54,7 +54,7 @@ public class ExportTransactionsUseCase implements ExportTransactions {
         validateExportQuota(userId, request);
 
         // 2. Fetch transactions with filter
-        List<Transaction> transactions = fetchTransactions(userId, request);
+        List<Transaction> transactions = fetchTransactions(userId, request.filter());
 
         // 3. Generate file based on format
         byte[] fileContent = generateFile(transactions, request.format());
@@ -107,7 +107,7 @@ public class ExportTransactionsUseCase implements ExportTransactions {
     /**
      * Fetch transactions based on filter criteria.
      */
-    private List<Transaction> fetchTransactions(UUID userId, ExportRequest filter) {
+    private List<Transaction> fetchTransactions(UUID userId, ReportFilter filter) {
         int exportLimit = subscriptionHelper.getExportLimit(userId);
 
         if (filter == null) {

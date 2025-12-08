@@ -1,7 +1,7 @@
 package com.fajars.expensetracker.report;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,10 +13,10 @@ import java.util.UUID;
 public record ReportFilter(
 
     @Schema(description = "Start date of the period", example = "2025-11-01T00:00:00")
-    LocalDate startDate,
+    LocalDateTime startDate,
 
     @Schema(description = "End date of the period", example = "2025-11-30T23:59:59")
-    LocalDate endDate,
+    LocalDateTime endDate,
 
     @Schema(description = "List of wallet IDs to include (empty = all wallets)")
     List<UUID> walletIds,
