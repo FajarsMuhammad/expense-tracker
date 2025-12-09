@@ -239,12 +239,11 @@ public class ReportController {
         if (limit != null && limit > 0) {
             breakdown = getCategoryBreakdown.getTopCategories(userId, filter, type, limit);
             log.info("Top {} categories generated", limit);
-            return ResponseEntity.ok(breakdown);
         } else {
             breakdown = getCategoryBreakdown.get(userId, filter, type);
             log.info("All categories breakdown generated: {} categories", breakdown.size());
-            return ResponseEntity.ok(breakdown);
         }
+        return ResponseEntity.ok(breakdown);
 
     }
 

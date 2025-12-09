@@ -66,6 +66,40 @@ public class SubscriptionController {
     }
 
     /**
+     * Get current user's subscription (alias for /status).
+     * <p>
+     * GET /subscriptions/me
+     * <p>
+     * Response: { "tier": "FREE", "status": "ACTIVE", "isPremium": false, "isTrial": false,
+     * "startedAt": "2025-12-06T10:00:00", "endedAt": null }
+     */
+    @GetMapping("/me")
+    @Operation(
+        summary = "Get my subscription",
+        description = "Get current user's subscription details (alias for /status)",
+        security = @SecurityRequirement(name = "bearer-jwt")
+    )
+    public ResponseEntity<SubscriptionStatusResponse> getMySubscription(
+        @AuthenticationPrincipal UserIdentity userIdentity
+    ) {
+        UUID userId = userIdentity.getUserId();
+        log.debug("GET /api/v1/subscriptions/me - userId: {}", userId);
+
+        Subscription subscription = getUserSubscription.getSubscription(userId);
+
+        SubscriptionStatusResponse response = SubscriptionStatusResponse.builder()
+            .tier(subscription.getPlan())
+            .status(subscription.getStatus())
+            .isPremium(subscription.isPremium())
+            .isTrial(subscription.isTrial())
+            .startedAt(subscription.getStartedAt())
+            .endedAt(subscription.getEndedAt())
+            .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Start trial subscription. User must be eligible (never had premium before).
      * <p>
      * POST /subscriptions/trial

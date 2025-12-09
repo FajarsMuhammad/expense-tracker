@@ -1,5 +1,6 @@
 package com.fajars.expensetracker.payment;
 
+import com.fajars.expensetracker.auth.UserIdentity;
 import com.fajars.expensetracker.payment.midtrans.MidtransWebhookPayload;
 import com.fajars.expensetracker.payment.usecase.CreatePaymentResponse;
 import com.fajars.expensetracker.payment.usecase.CreateSubscriptionPayment;
@@ -7,14 +8,16 @@ import com.fajars.expensetracker.payment.usecase.ProcessPaymentWebhook;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.UUID;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * REST controller for payment operations.
@@ -58,10 +61,10 @@ public class PaymentController {
         security = @SecurityRequirement(name = "bearer-jwt")
     )
     public ResponseEntity<CreatePaymentResponse> createSubscriptionPayment(
-        @AuthenticationPrincipal UserDetails userDetails,
+        @AuthenticationPrincipal UserIdentity userDetails,
         @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey
     ) {
-        UUID userId = UUID.fromString(userDetails.getUsername());
+        UUID userId = userDetails.getUserId();
         log.info("Creating subscription payment for user: {}", userId);
 
         CreatePaymentResponse response = createSubscriptionPayment.createPayment(userId, idempotencyKey);
