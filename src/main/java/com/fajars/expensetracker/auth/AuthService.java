@@ -7,6 +7,7 @@ import com.fajars.expensetracker.common.logging.BusinessEventLogger;
 import com.fajars.expensetracker.common.metrics.MetricsService;
 import com.fajars.expensetracker.subscription.Subscription;
 import com.fajars.expensetracker.subscription.usecase.CreateFreeSubscription;
+import com.fajars.expensetracker.subscription.usecase.CreateTrialSubscription;
 import com.fajars.expensetracker.user.User;
 import com.fajars.expensetracker.user.UserRepository;
 import com.fajars.expensetracker.common.util.JwtUtil;
@@ -37,12 +38,14 @@ public class AuthService {
     private final MetricsService metricsService;
     private final BusinessEventLogger businessEventLogger;
     private final CreateFreeSubscription createFreeSubscription;
+    private final CreateTrialSubscription createTrialSubscription;
     private final CreateWalletUseCase createWalletUseCase;
 
     public AuthService(
         UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil,
         AuthenticationManager authenticationManager, MetricsService metricsService,
         BusinessEventLogger businessEventLogger, CreateFreeSubscription createFreeSubscription,
+        CreateTrialSubscription createTrialSubscription,
         CreateWalletUseCase createWalletUseCase
     ) {
         this.userRepository = userRepository;
@@ -52,12 +55,17 @@ public class AuthService {
         this.metricsService = metricsService;
         this.businessEventLogger = businessEventLogger;
         this.createFreeSubscription = createFreeSubscription;
+        this.createTrialSubscription = createTrialSubscription;
         this.createWalletUseCase = createWalletUseCase;
     }
 
     /**
-     * Register a new user with FREE subscription and default wallet.
+     * Register a new user with 14-day TRIAL subscription and default wallet.
      * This operation is atomic - if any step fails, entire registration rolls back.
+     *
+     * <p>Since Milestone 6: All new users get PREMIUM trial automatically.
+     * This gives them immediate access to all features for 14 days, improving
+     * activation and conversion rates.
      *
      * @param req registration request
      * @return authentication response with subscription and wallet info
@@ -84,9 +92,10 @@ public class AuthService {
         user = userRepository.save(user);
         log.debug("User created: userId={}", user.getId());
 
-        // Step 3: Create FREE subscription
-        Subscription subscription = createFreeSubscription.createFree(user.getId());
-        log.debug("FREE subscription created: subscriptionId={}", subscription.getId());
+        // Step 3: Create TRIAL subscription (14 days PREMIUM)
+        Subscription subscription = createTrialSubscription.createTrialForNewUser(user.getId());
+        log.debug("TRIAL subscription created: subscriptionId={}, expiresAt={}",
+                  subscription.getId(), subscription.getEndedAt());
 
         // Step 4: Create default wallet
         Wallet defaultWallet = createWalletUseCase.createDefaultForNewUser(user.getId());
@@ -96,14 +105,15 @@ public class AuthService {
         String token = jwtUtil.generateToken(user.getEmail());
 
         // Step 6: Log business events and metrics
+        // Note: Trial subscription already logged USER_REGISTERED_WITH_TRIAL event
         String ipAddress = getClientIpAddress();
         businessEventLogger.logUserRegistration(user.getEmail(), ipAddress);
         metricsService.recordUserRegistration();
-        metricsService.incrementCounter("user.registered.with_subscription");
+        // Note: user.registered.trial metric already incremented in CreateTrialSubscription
 
         long duration = System.currentTimeMillis() - startTime;
-        log.info("Registration completed successfully: userId={}, email={}, duration={}ms",
-                user.getId(), user.getEmail(), duration);
+        log.info("Registration completed successfully: userId={}, email={}, tier=TRIAL, expiresAt={}, duration={}ms",
+                user.getId(), user.getEmail(), subscription.getEndedAt(), duration);
 
         // Step 7: Build enhanced response with subscription and wallet info
         SubscriptionInfo subscriptionInfo = new SubscriptionInfo(

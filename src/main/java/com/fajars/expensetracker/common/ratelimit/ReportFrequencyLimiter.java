@@ -15,7 +15,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Rate limiter for report generation frequency.
  * FREE tier users are limited to 10 reports per day.
  * PREMIUM users have unlimited reports.
+ *
+ * @deprecated Since Milestone 6. Reports are now premium-only, frequency limiting no longer needed.
+ *             Access control enforced via AOP {@link com.fajars.expensetracker.common.security.RequiresPremium}.
+ *             This class is kept for backward compatibility but will be removed in future versions.
  */
+@Deprecated(since = "Milestone 6", forRemoval = true)
 @Component
 @Slf4j
 public class ReportFrequencyLimiter {

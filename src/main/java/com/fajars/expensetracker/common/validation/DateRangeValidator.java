@@ -26,7 +26,11 @@ public class DateRangeValidator {
      * @param startDate start date
      * @param endDate end date
      * @throws IllegalArgumentException if validation fails
+     * @deprecated Since Milestone 6. Reports are now premium-only, free tier validation no longer needed.
+     *             Only {@link #validatePremiumTier(LocalDateTime, LocalDateTime)} is used.
+     *             This method is kept for backward compatibility but will be removed in future versions.
      */
+    @Deprecated(since = "Milestone 6", forRemoval = true)
     public void validateFreeTier(LocalDateTime startDate, LocalDateTime endDate) {
         validate(startDate, endDate, FREE_TIER_MAX_DAYS);
     }

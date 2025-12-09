@@ -1,10 +1,8 @@
 package com.fajars.expensetracker.report;
 
 import com.fajars.expensetracker.auth.UserIdentity;
-import com.fajars.expensetracker.common.exception.RateLimitExceededException;
-import com.fajars.expensetracker.common.ratelimit.RateLimiter;
+import com.fajars.expensetracker.common.security.RequiresPremium;
 import com.fajars.expensetracker.report.usecase.ExportTransactions;
-import com.fajars.expensetracker.subscription.SubscriptionHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -19,39 +17,70 @@ import java.util.UUID;
 /**
  * REST controller for data export functionality.
  *
- * Endpoints:
- * - POST /api/v1/export/transactions - Export transactions in CSV/Excel/PDF
+ * <p><b>PREMIUM Feature:</b> All export functionality requires PREMIUM or TRIAL subscription.
+ * FREE users will receive HTTP 403 Forbidden with upgrade prompt.
+ *
+ * <p>Access control is enforced via AOP using {@link RequiresPremium} annotation.
+ * See {@link com.fajars.expensetracker.common.security.PremiumFeatureAspect} for implementation.
+ *
+ * <p>Supported Formats (PREMIUM only):
+ * <ul>
+ *   <li>CSV: Comma-separated values with Indonesian localization</li>
+ *   <li>EXCEL: Excel file with styling, summary row, and auto-sized columns</li>
+ *   <li>PDF: Professional PDF report with summary statistics</li>
+ * </ul>
+ *
+ * <p>Export Limits:
+ * <ul>
+ *   <li>PREMIUM/TRIAL users: Up to 10,000 records per export</li>
+ *   <li>Max date range: 365 days</li>
+ * </ul>
  */
 @RestController
 @RequestMapping("/export")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Export", description = "Data export in multiple formats")
+@Tag(name = "Export", description = "Data export in multiple formats (PREMIUM only)")
 public class ExportController {
 
     private final ExportTransactions exportTransactions;
-    private final RateLimiter rateLimiter;
-    private final SubscriptionHelper subscriptionHelper;
 
     /**
      * Export transactions in the specified format.
      *
-     * Supported formats:
-     * - CSV: Simple comma-separated values with Indonesian localization
-     * - EXCEL: Excel file with styling, summary row, and auto-sized columns
-     * - PDF: Professional PDF report with summary statistics
+     * <p><b>PREMIUM Feature:</b> Requires PREMIUM or TRIAL subscription.
+     * Access is enforced via {@link RequiresPremium} annotation using AOP.
      *
-     * Free tier users are limited to 100 records per export.
-     * Premium users have unlimited exports.
+     * <p>All formats (CSV, Excel, PDF) require PREMIUM subscription.
+     * No rate limiting - premium subscription provides sufficient abuse protection.
      *
+     * <p>Supported formats:
+     * <ul>
+     *   <li>CSV: Simple comma-separated values with Indonesian localization</li>
+     *   <li>EXCEL: Excel file with styling, summary row, and auto-sized columns</li>
+     *   <li>PDF: Professional PDF report with summary statistics</li>
+     * </ul>
+     *
+     * <p>Export limits:
+     * <ul>
+     *   <li>Records: Up to 10,000 transactions per export</li>
+     *   <li>Date range: Max 365 days</li>
+     * </ul>
+     *
+     * @param userIdentity authenticated user identity
      * @param request export request with format and filters
      * @return export response with base64-encoded file content
      */
     @PostMapping("/transactions")
+    @RequiresPremium(
+        feature = "export_transactions",
+        message = "Export functionality is available for PREMIUM users only. " +
+                  "Upgrade to export your transactions in CSV, Excel, or PDF format with up to 10,000 records."
+    )
     @Operation(
-        summary = "Export transactions",
+        summary = "Export transactions (PREMIUM)",
         description = "Export transactions in CSV, Excel, or PDF format. " +
-            "Free tier: limited to 100 records. " +
+            "PREMIUM users can export up to 10,000 records with max 365-day date range. " +
             "Returns base64-encoded file content for easy download. " +
             "Supports filtering by date range, wallet, category, and transaction type."
     )
@@ -63,28 +92,11 @@ public class ExportController {
         log.info("POST /api/v1/export/transactions - userId: {}, format: {}",
             userId, request.format());
 
-        // Check rate limit (10 exports per minute)
-        if (!rateLimiter.allowExport(userId)) {
-            int remaining = rateLimiter.getRemainingExports(userId);
-            throw new RateLimitExceededException(
-                String.format("Export rate limit exceeded. Maximum 10 exports per minute allowed. " +
-                    "Please try again later. Remaining: %d", remaining)
-            );
-        }
-
-        // Check premium features
-        boolean isPremium = subscriptionHelper.isPremiumUser(userId);
-        if (!isPremium && (request.format() == ExportFormat.PDF || request.format() == ExportFormat.EXCEL)) {
-            throw new IllegalArgumentException(
-                String.format("Format %s is only available for premium users. " +
-                    "Please upgrade your subscription or use CSV format.", request.format())
-            );
-        }
-
+        // Export (tier check handled by AOP aspect)
         ExportResponse response = exportTransactions.export(userId, request);
 
-        log.info("Export completed: {}, size: {} bytes, remaining exports: {}",
-            response.fileName(), response.fileSize(), rateLimiter.getRemainingExports(userId));
+        log.info("Export completed: userId={}, format={}, fileName={}, size={} bytes",
+            userId, request.format(), response.fileName(), response.fileSize());
 
         return ResponseEntity.ok(response);
     }

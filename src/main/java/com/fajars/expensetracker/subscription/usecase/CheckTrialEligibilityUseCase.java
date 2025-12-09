@@ -23,6 +23,14 @@ public class CheckTrialEligibilityUseCase implements CheckTrialEligibility {
     public boolean isEligible(UUID userId) {
         log.debug("Checking trial eligibility for user: {}", userId);
 
+        // User is not eligible if they have EVER had a trial (including registration trial)
+        // Since Milestone 6: All users get trial at registration, so they can only trial once
+        boolean hasHadTrial = subscriptionRepository.hasHadTrialSubscription(userId);
+        if (hasHadTrial) {
+            log.debug("User {} not eligible: already had trial (including registration trial)", userId);
+            return false;
+        }
+
         // User is not eligible if they have had premium subscription before
         boolean hasHadPremium = subscriptionRepository.hasHadPremiumSubscription(userId);
         if (hasHadPremium) {

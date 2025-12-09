@@ -53,14 +53,14 @@ public class CreateFreeSubscriptionUseCase implements CreateFreeSubscription {
 
         subscription = subscriptionRepository.save(subscription);
 
-        logBusinessEvent(userId, subscription);
+        logBusinessEvent(user, subscription);
         metricsService.incrementCounter("subscription.created", "tier", "FREE");
 
         log.info("FREE subscription created for user: {}", userId);
         return subscription;
     }
 
-    private void logBusinessEvent(UUID userId, Subscription subscription) {
+    private void logBusinessEvent(User user, Subscription subscription) {
         Map<String, Object> attributes = new HashMap<>();
         attributes.put("subscriptionId", subscription.getId());
         attributes.put("plan", subscription.getPlan());
@@ -68,9 +68,7 @@ public class CreateFreeSubscriptionUseCase implements CreateFreeSubscription {
         attributes.put("startedAt", subscription.getStartedAt());
         attributes.put("endedAt", subscription.getEndedAt());
 
-        User user = userRepository.findById(userId).orElse(null);
-        String username = user != null ? user.getEmail() : userId.toString();
-
+        String username = user.getEmail();
         businessEventLogger.logBusinessEvent("SUBSCRIPTION_CREATED", username, attributes);
     }
 }

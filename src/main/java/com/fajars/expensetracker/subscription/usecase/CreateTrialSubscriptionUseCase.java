@@ -11,6 +11,7 @@ import com.fajars.expensetracker.user.User;
 import com.fajars.expensetracker.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +28,8 @@ import java.util.UUID;
 @Slf4j
 public class CreateTrialSubscriptionUseCase implements CreateTrialSubscription {
 
-    private static final int TRIAL_DAYS = 14;
+    @Value("${app.subscription.trial-days:14}")
+    private int trialDays;
 
     private final SubscriptionRepository subscriptionRepository;
     private final UserRepository userRepository;
@@ -65,12 +67,12 @@ public class CreateTrialSubscriptionUseCase implements CreateTrialSubscription {
             .provider(null)
             .providerSubscriptionId(null)
             .startedAt(now)
-            .endedAt(now.plusDays(TRIAL_DAYS))
+            .endedAt(now.plusDays(trialDays))
             .build();
 
         subscription = subscriptionRepository.save(subscription);
 
-        logBusinessEvent(userId, subscription);
+        logBusinessEvent(user, subscription, "TRIAL_STARTED");
         metricsService.incrementCounter("subscription.trial_started");
 
         log.info("TRIAL subscription created for user {} (expires: {})",
@@ -78,7 +80,42 @@ public class CreateTrialSubscriptionUseCase implements CreateTrialSubscription {
         return subscription;
     }
 
-    private void logBusinessEvent(UUID userId, Subscription subscription) {
+    @Override
+    @Transactional
+    public Subscription createTrialForNewUser(UUID userId) {
+        log.info("Creating TRIAL subscription for new user registration: {}", userId);
+
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> BusinessException.notFound("User not found"));
+
+        // Skip eligibility check - new users automatically get trial
+        // No need to cancel existing subscription - this is a new user
+
+        // Create trial subscription
+        LocalDateTime now = LocalDateTime.now();
+        Subscription subscription = Subscription.builder()
+            .id(UUID.randomUUID())
+            .user(user)
+            .plan(SubscriptionTier.PREMIUM)
+            .status(SubscriptionStatus.TRIAL)
+            .provider(null)
+            .providerSubscriptionId(null)
+            .startedAt(now)
+            .endedAt(now.plusDays(trialDays))
+            .build();
+
+        subscription = subscriptionRepository.save(subscription);
+
+        logBusinessEvent(user, subscription, "USER_REGISTERED_WITH_TRIAL");
+        metricsService.incrementCounter("subscription.trial_started");
+        metricsService.incrementCounter("user.registered.trial");
+
+        log.info("TRIAL subscription created for new user {} (expires: {})",
+                 userId, subscription.getEndedAt());
+        return subscription;
+    }
+
+    private void logBusinessEvent(User user, Subscription subscription, String eventName) {
         Map<String, Object> attributes = new HashMap<>();
         attributes.put("subscriptionId", subscription.getId());
         attributes.put("plan", subscription.getPlan());
@@ -86,9 +123,7 @@ public class CreateTrialSubscriptionUseCase implements CreateTrialSubscription {
         attributes.put("startedAt", subscription.getStartedAt());
         attributes.put("endedAt", subscription.getEndedAt());
 
-        User user = userRepository.findById(userId).orElse(null);
-        String username = user != null ? user.getEmail() : userId.toString();
-
-        businessEventLogger.logBusinessEvent("TRIAL_STARTED", username, attributes);
+        String username = user.getEmail();
+        businessEventLogger.logBusinessEvent(eventName, username, attributes);
     }
 }

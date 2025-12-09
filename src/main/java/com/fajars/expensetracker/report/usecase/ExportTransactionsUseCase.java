@@ -25,11 +25,24 @@ import java.util.*;
 /**
  * Use case for exporting transactions in various formats.
  *
- * Features:
- * - Supports CSV, Excel, PDF formats
- * - Export quota validation (free vs premium)
- * - Metrics and logging
- * - Base64 encoding for easy frontend consumption
+ * <p><b>PREMIUM Feature:</b> Export is now premium-only.
+ * Access control is enforced at controller level via AOP {@link com.fajars.expensetracker.common.security.RequiresPremium}.
+ * All users reaching this use case are guaranteed to be PREMIUM or TRIAL tier.
+ *
+ * <p>Features:
+ * <ul>
+ *   <li>Supports CSV, Excel, PDF formats</li>
+ *   <li>Export limit: 10,000 records for PREMIUM users</li>
+ *   <li>Comprehensive metrics and logging</li>
+ *   <li>Base64 encoding for easy frontend consumption</li>
+ * </ul>
+ *
+ * <p>Performance:
+ * <ul>
+ *   <li>Read-only transaction for optimal database performance</li>
+ *   <li>Paginated fetch to handle large datasets efficiently</li>
+ *   <li>Metrics tracking for monitoring export performance</li>
+ * </ul>
  */
 @Service
 @RequiredArgsConstructor
@@ -50,7 +63,8 @@ public class ExportTransactionsUseCase implements ExportTransactions {
         long startTime = System.currentTimeMillis();
         log.info("Exporting transactions for user {} in format {}", userId, request.format());
 
-        // 1. Validate export quota (TODO: implement premium check)
+        // 1. Validate export quota
+        // Note: All users are PREMIUM (enforced by AOP), so this always returns 10,000 record limit
         validateExportQuota(userId, request);
 
         // 2. Convert ExportFilter to ReportFilter and fetch transactions
@@ -127,15 +141,15 @@ public class ExportTransactionsUseCase implements ExportTransactions {
     }
 
     /**
-     * Validate export quota based on user subscription tier.
-     * Free users: limited to 100 records
-     * Premium users: up to 10,000 records
+     * Validate export quota for premium users.
+     *
+     * <p>Note: Since export is premium-only (enforced by AOP), this always returns 10,000 records limit.
+     * This method exists for potential future tier differentiation (e.g., PREMIUM vs ENTERPRISE tiers).
      */
     private void validateExportQuota(UUID userId, ExportRequest request) {
-        boolean isPremium = subscriptionHelper.isPremiumUser(userId);
         int exportLimit = subscriptionHelper.getExportLimit(userId);
 
-        log.debug("Export quota for user {}: {} (premium: {})", userId, exportLimit, isPremium);
+        log.debug("Export quota for user {}: {} records", userId, exportLimit);
 
         // Note: The actual limit is enforced in fetchTransactions
     }
