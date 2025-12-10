@@ -37,14 +37,17 @@ public class DataSeeder implements CommandLineRunner {
         // Income categories
         List<Category> incomeCategories = List.of(
                 createDefaultCategory("Salary", CategoryType.INCOME),
-                createDefaultCategory("Gift", CategoryType.INCOME)
+                createDefaultCategory("Gift", CategoryType.INCOME),
+                createDefaultCategory("Bonus", CategoryType.INCOME),
+                createDefaultCategory("Other Income", CategoryType.INCOME)
         );
 
         // Expense categories
         List<Category> expenseCategories = List.of(
                 createDefaultCategory("Food & Dining", CategoryType.EXPENSE),
                 createDefaultCategory("Shopping", CategoryType.EXPENSE),
-                createDefaultCategory("Bills & Utilities", CategoryType.EXPENSE)
+                createDefaultCategory("Bills & Utilities", CategoryType.EXPENSE),
+                createDefaultCategory("Other Expense", CategoryType.EXPENSE)
         );
 
         // Save all categories
