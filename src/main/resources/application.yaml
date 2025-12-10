@@ -39,8 +39,8 @@ jwt:
 # Get your keys from: https://dashboard.midtrans.com/ (Account > Access Keys)
 # Sandbox for testing, Production for live transactions
 midtrans:
-  server-key: ${MIDTRANS_SERVER_KEY:Mid-server-4vP2k51n6CayJTCz4Bk3hR7I}
-  client-key: ${MIDTRANS_CLIENT_KEY:Mid-client-V9mWEgDtqs65w4rL}
+  server-key: ${MIDTRANS_SERVER_KEY}
+  client-key: ${MIDTRANS_CLIENT_KEY}
   api-url: ${MIDTRANS_API_URL:https://app.sandbox.midtrans.com}
   is-production: ${MIDTRANS_IS_PRODUCTION:false}
 
