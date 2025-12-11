@@ -42,7 +42,6 @@
       "Bash(tree:*)",
       "Bash(docker build:*)",
       "Bash(xargs kill:*)",
-      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0ZXhwb3J0QGV4YW1wbGUuY29tIiwiaWF0IjoxNzY1MTYyNDMxLCJleHAiOjE3NjUyNDg4MzF9.gbbAoo7idW9L9vsLcIn5P5JhMVhz_xg0H01hPRQJ4uI\")",
       "Bash(xargs:*)",
       "Bash(./gradlew bootJar:*)",
       "Bash(ls:*)",

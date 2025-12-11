@@ -1,14 +1,12 @@
 package com.fajars.expensetracker.transaction.usecase;
 
 import com.fajars.expensetracker.transaction.TransactionFilter;
-import com.fajars.expensetracker.transaction.TransactionResponse;
-import org.springframework.data.domain.Page;
-
+import com.fajars.expensetracker.transaction.TransactionPageResponse;
 import java.util.UUID;
 
 /**
  * Use Case: Find all transactions with filters and pagination
  */
 public interface FindAllTransactions {
-    Page<TransactionResponse> findByUserIdWithFilters(UUID userId, TransactionFilter filter);
+    TransactionPageResponse findByUserIdWithFilters(UUID userId, TransactionFilter filter);
 }

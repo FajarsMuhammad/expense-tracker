@@ -1,10 +1,13 @@
 package com.fajars.expensetracker.transaction.usecase;
 
 import com.fajars.expensetracker.transaction.TransactionFilter;
+import com.fajars.expensetracker.transaction.TransactionPageResponse;
 import com.fajars.expensetracker.transaction.TransactionRepository;
 import com.fajars.expensetracker.transaction.TransactionResponse;
+import com.fajars.expensetracker.transaction.projection.TransactionSummary;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -14,8 +17,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -23,11 +24,16 @@ public class FindAllTransactionsUseCase implements FindAllTransactions {
 
     private final TransactionRepository transactionRepository;
 
-    @Override
+    /**
+     * Find transactions with totals (incomeTotal and expenseTotal).
+     * This method runs two optimized queries:
+     * 1. Paginated transaction list
+     * 2. Aggregated totals (without fetching all entities)
+     */
     @Transactional(readOnly = true)
-    public Page<TransactionResponse> findByUserIdWithFilters(
+    public TransactionPageResponse findByUserIdWithFilters(
         UUID userId, TransactionFilter filter) {
-        log.debug("Finding transactions for user {} with filters: {}", userId, filter);
+        log.debug("Finding transactions with totals for user {} with filters: {}", userId, filter);
 
         // Create pageable with sorting by date descending
         Pageable pageable = PageRequest.of(
@@ -43,11 +49,11 @@ public class FindAllTransactionsUseCase implements FindAllTransactions {
             fromDateTime = filter.from().atStartOfDay();
         }
         if (filter.to() != null) {
-            toDateTime = filter.to()
-                .atTime(LocalTime.MAX);
+            toDateTime = filter.to().atTime(LocalTime.MAX);
         }
 
-        Page<TransactionResponse> result = transactionRepository.findByUserIdWithFilters(
+        // Query 1: Get paginated transactions
+        Page<TransactionResponse> transactionPage = transactionRepository.findByUserIdWithFilters(
             userId,
             filter.walletId(),
             filter.categoryId(),
@@ -57,7 +63,25 @@ public class FindAllTransactionsUseCase implements FindAllTransactions {
             pageable
         ).map(TransactionResponse::from);
 
-        log.debug("Found {} transactions for user {}", result.getTotalElements(), userId);
-        return result;
+        TransactionSummary summary = transactionRepository.getTotalsByFilters(
+            userId,
+            filter.walletId(),
+            filter.categoryId(),
+            filter.type(),
+            fromDateTime,
+            toDateTime
+        );
+
+        log.debug("Found {} transactions with incomeTotal={}, expenseTotal={} for user {}",
+            transactionPage.getTotalElements(),
+            summary.getTotalIncome(),
+            summary.getTotalExpense(),
+            userId);
+
+        return TransactionPageResponse.from(
+            transactionPage,
+            summary.getTotalIncome(),
+            summary.getTotalExpense()
+        );
     }
 }
