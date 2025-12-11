@@ -1,6 +1,8 @@
 package com.fajars.expensetracker.common.exception;
 
+import com.fajars.expensetracker.common.i18n.MessageHelper;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
@@ -20,13 +22,21 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Global exception handler for all REST controllers
+ * Global exception handler for all REST controllers.
+ *
+ * <p>Supports i18n via Accept-Language header (id, en).
+ * All error messages are localized based on user's locale preference.
+ *
+ * @since Milestone 7
  */
 @RestControllerAdvice
+@RequiredArgsConstructor
 @Slf4j
 public class GlobalExceptionHandler {
 
     private static final String CORRELATION_ID_KEY = "correlationId";
+
+    private final MessageHelper messageHelper;
 
     /**
      * Handle validation errors (Bean Validation)
@@ -54,8 +64,8 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(java.time.LocalDateTime.now().toString())
                 .status(HttpStatus.BAD_REQUEST.value())
-                .error("Validation Failed")
-                .message("Input validation failed. Please check the fields.")
+                .error(messageHelper.getMessage("validation.failed"))
+                .message(messageHelper.getMessage("validation.failed"))
                 .path(request.getRequestURI())
                 .correlationId(MDC.get(CORRELATION_ID_KEY))
                 .validationErrors(validationErrors)
@@ -81,7 +91,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(java.time.LocalDateTime.now().toString())
                 .status(HttpStatus.BAD_REQUEST.value())
-                .error("Bad Request")
+                .error(messageHelper.getMessage("common.invalid_request"))
                 .message(message)
                 .path(request.getRequestURI())
                 .correlationId(MDC.get(CORRELATION_ID_KEY))
@@ -103,8 +113,8 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(java.time.LocalDateTime.now().toString())
                 .status(HttpStatus.UNAUTHORIZED.value())
-                .error("Authentication Failed")
-                .message("Invalid username or password")
+                .error(messageHelper.getMessage("common.unauthorized"))
+                .message(messageHelper.getMessage("auth.login.invalid_credentials"))
                 .path(request.getRequestURI())
                 .correlationId(MDC.get(CORRELATION_ID_KEY))
                 .build();
@@ -125,8 +135,8 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(java.time.LocalDateTime.now().toString())
                 .status(HttpStatus.UNAUTHORIZED.value())
-                .error("Authentication Required")
-                .message("Authentication is required to access this resource")
+                .error(messageHelper.getMessage("common.unauthorized"))
+                .message(messageHelper.getMessage("common.unauthorized"))
                 .path(request.getRequestURI())
                 .correlationId(MDC.get(CORRELATION_ID_KEY))
                 .build();
@@ -147,8 +157,8 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(java.time.LocalDateTime.now().toString())
                 .status(HttpStatus.FORBIDDEN.value())
-                .error("Access Denied")
-                .message("You don't have permission to access this resource")
+                .error(messageHelper.getMessage("common.forbidden"))
+                .message(messageHelper.getMessage("common.forbidden"))
                 .path(request.getRequestURI())
                 .correlationId(MDC.get(CORRELATION_ID_KEY))
                 .build();
@@ -169,7 +179,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(java.time.LocalDateTime.now().toString())
                 .status(HttpStatus.BAD_REQUEST.value())
-                .error("Bad Request")
+                .error(messageHelper.getMessage("common.invalid_request"))
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .correlationId(MDC.get(CORRELATION_ID_KEY))
@@ -191,7 +201,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(java.time.LocalDateTime.now().toString())
                 .status(HttpStatus.NOT_FOUND.value())
-                .error("Not Found")
+                .error(messageHelper.getMessage("common.not_found"))
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .correlationId(MDC.get(CORRELATION_ID_KEY))
@@ -236,8 +246,8 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(java.time.LocalDateTime.now().toString())
                 .status(HttpStatus.BAD_GATEWAY.value())
-                .error("External Service Error")
-                .message("Payment service is temporarily unavailable. Please try again later.")
+                .error(messageHelper.getMessage("system.service_unavailable"))
+                .message(messageHelper.getMessage("system.service_unavailable"))
                 .path(request.getRequestURI())
                 .correlationId(MDC.get(CORRELATION_ID_KEY))
                 .build();
@@ -258,8 +268,8 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(java.time.LocalDateTime.now().toString())
                 .status(HttpStatus.TOO_MANY_REQUESTS.value())
-                .error("Rate Limit Exceeded")
-                .message(ex.getMessage())
+                .error(messageHelper.getMessage("system.rate_limit_exceeded"))
+                .message(messageHelper.getMessage("system.rate_limit_exceeded"))
                 .path(request.getRequestURI())
                 .correlationId(MDC.get(CORRELATION_ID_KEY))
                 .build();
@@ -286,8 +296,8 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(java.time.LocalDateTime.now().toString())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .error("Internal Server Error")
-                .message("An unexpected error occurred. Please try again later.")
+                .error(messageHelper.getMessage("common.internal_error"))
+                .message(messageHelper.getMessage("common.internal_error"))
                 .path(request.getRequestURI())
                 .correlationId(MDC.get(CORRELATION_ID_KEY))
                 .build();

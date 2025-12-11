@@ -31,12 +31,12 @@ public record FinancialSummaryResponse(
     Integer transactionCount,
 
     @Schema(description = "Breakdown of income by category")
-    List<CategoryBreakdownDto> incomeByCategory,
+    List<CategoryBreakdownResponse> incomeByCategory,
 
     @Schema(description = "Breakdown of expense by category")
-    List<CategoryBreakdownDto> expenseByCategory,
+    List<CategoryBreakdownResponse> expenseByCategory,
 
     @Schema(description = "Current wallet balances")
-    List<WalletBalanceDto> walletBalances
+    List<WalletBalanceResponse> walletBalances
 ) {
 }

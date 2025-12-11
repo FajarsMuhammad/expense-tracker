@@ -1,6 +1,6 @@
 package com.fajars.expensetracker.report.usecase;
 
-import com.fajars.expensetracker.report.CategoryBreakdownDto;
+import com.fajars.expensetracker.report.CategoryBreakdownResponse;
 import com.fajars.expensetracker.report.ReportFilter;
 import com.fajars.expensetracker.transaction.TransactionRepository;
 import com.fajars.expensetracker.transaction.TransactionType;
@@ -33,7 +33,7 @@ public class GetCategoryBreakdownUseCase implements GetCategoryBreakdown {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "categoryBreakdown", key = "#userId + '-' + #filter.startDate() + '-' + #filter.endDate() + '-' + #type")
-    public List<CategoryBreakdownDto> get(UUID userId, ReportFilter filter, TransactionType type) {
+    public List<CategoryBreakdownResponse> get(UUID userId, ReportFilter filter, TransactionType type) {
         log.debug("Getting category breakdown for user: {}, type: {}", userId, type);
 
         // Apply defaults if not provided
@@ -60,7 +60,7 @@ public class GetCategoryBreakdownUseCase implements GetCategoryBreakdown {
             .sum();
 
         // Convert to DTOs with percentage
-        List<CategoryBreakdownDto> breakdown = new ArrayList<>();
+        List<CategoryBreakdownResponse> breakdown = new ArrayList<>();
         for (CategoryBreakdown row : results) {
             UUID categoryId = row.getCategoryId();
             String categoryName = row.getCategoryName();
@@ -71,7 +71,7 @@ public class GetCategoryBreakdownUseCase implements GetCategoryBreakdown {
             // Calculate percentage
             Double percentage = totalAmount > 0 ? (amount / totalAmount) * 100 : 0.0;
 
-            breakdown.add(new CategoryBreakdownDto(
+            breakdown.add(new CategoryBreakdownResponse(
                 categoryId,
                 categoryName,
                 categoryType,
@@ -90,11 +90,11 @@ public class GetCategoryBreakdownUseCase implements GetCategoryBreakdown {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "topCategories", key = "#userId + '-' + #filter.startDate() + '-' + #filter.endDate() + '-' + #type + '-' + #limit")
-    public List<CategoryBreakdownDto> getTopCategories(
+    public List<CategoryBreakdownResponse> getTopCategories(
         UUID userId, ReportFilter filter, TransactionType type, int limit) {
         log.debug("Getting top {} categories for user: {}, type: {}", limit, userId, type);
 
-        List<CategoryBreakdownDto> allCategories = get(userId, filter, type);
+        List<CategoryBreakdownResponse> allCategories = get(userId, filter, type);
 
         // Return top N categories (already sorted by amount DESC)
         return allCategories.stream()

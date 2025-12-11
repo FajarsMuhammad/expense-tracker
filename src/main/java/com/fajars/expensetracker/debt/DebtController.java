@@ -1,7 +1,7 @@
 package com.fajars.expensetracker.debt;
 
 import com.fajars.expensetracker.debt.usecase.*;
-import com.fajars.expensetracker.user.UserDto;
+import com.fajars.expensetracker.user.UserResponse;
 import com.fajars.expensetracker.user.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -216,7 +216,7 @@ public class DebtController {
             throw new IllegalStateException("User not authenticated");
         }
         String email = auth.getName();
-        UserDto user = userService.getByEmail(email);
+        UserResponse user = userService.getByEmail(email);
         return user.id();
     }
 }

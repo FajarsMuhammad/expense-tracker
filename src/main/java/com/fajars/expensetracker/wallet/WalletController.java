@@ -1,6 +1,6 @@
 package com.fajars.expensetracker.wallet;
 
-import com.fajars.expensetracker.user.UserDto;
+import com.fajars.expensetracker.user.UserResponse;
 import com.fajars.expensetracker.user.UserService;
 import com.fajars.expensetracker.wallet.usecase.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -124,7 +124,7 @@ public class WalletController {
         }
         // Email is used as username in JWT
         String email = auth.getName();
-        UserDto user = userService.getByEmail(email);
+        UserResponse user = userService.getByEmail(email);
         return user.id();
     }
 }

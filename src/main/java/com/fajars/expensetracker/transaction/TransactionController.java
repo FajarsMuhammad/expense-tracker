@@ -1,7 +1,7 @@
 package com.fajars.expensetracker.transaction;
 
 import com.fajars.expensetracker.transaction.usecase.*;
-import com.fajars.expensetracker.user.UserDto;
+import com.fajars.expensetracker.user.UserResponse;
 import com.fajars.expensetracker.user.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -22,7 +22,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Date;
 import java.util.UUID;
 
 @RestController
@@ -174,7 +173,7 @@ public class TransactionController {
             throw new IllegalStateException("User not authenticated");
         }
         String email = auth.getName();
-        UserDto user = userService.getByEmail(email);
+        UserResponse user = userService.getByEmail(email);
         return user.id();
     }
 }

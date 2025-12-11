@@ -140,7 +140,7 @@ public class ReportController {
         description = "Get time series data for income and expense trends. Returns daily data points that can be aggregated by granularity (DAILY, WEEKLY, MONTHLY). " +
                       "Max date range: 365 days for PREMIUM users."
     )
-    public ResponseEntity<List<TrendDataDto>> getTrend(
+    public ResponseEntity<List<TrendDataResponse>> getTrend(
         @AuthenticationPrincipal UserIdentity userIdentity,
         @RequestParam(required = false) LocalDate startDate,
         @RequestParam(required = false) LocalDate endDate,
@@ -174,7 +174,7 @@ public class ReportController {
             1000   // size (max data points)
         );
 
-        List<TrendDataDto> trendData = getIncomeExpenseTrend.get(userId, filter, granularity);
+        List<TrendDataResponse> trendData = getIncomeExpenseTrend.get(userId, filter, granularity);
 
         log.info("Trend data generated: {} data points", trendData.size());
 
@@ -207,7 +207,7 @@ public class ReportController {
             "Returns categories sorted by amount (highest first). " +
             "Defaults to EXPENSE type if not specified. Max date range: 365 days for PREMIUM users."
     )
-    public ResponseEntity<List<CategoryBreakdownDto>> getCategoryBreakdown(
+    public ResponseEntity<List<CategoryBreakdownResponse>> getCategoryBreakdown(
         @AuthenticationPrincipal UserIdentity userIdentity,
         @RequestParam(required = false) LocalDate startDate,
         @RequestParam(required = false) LocalDate endDate,
@@ -243,7 +243,7 @@ public class ReportController {
         );
 
         // Get breakdown (all or top N)
-        List<CategoryBreakdownDto> breakdown;
+        List<CategoryBreakdownResponse> breakdown;
         if (limit != null && limit > 0) {
             breakdown = getCategoryBreakdown.getTopCategories(userId, filter, type, limit);
             log.info("Top {} categories generated", limit);
