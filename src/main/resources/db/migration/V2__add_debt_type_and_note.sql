@@ -1,9 +1,6 @@
 -- Add type column to debts table
 ALTER TABLE debts ADD COLUMN type VARCHAR(20);
 
--- Set default value for existing rows (assuming existing debts are payables)
-UPDATE debts SET type = 'PAYABLE' WHERE type IS NULL;
-
 -- Make type column NOT NULL
 ALTER TABLE debts ALTER COLUMN type SET NOT NULL;
 

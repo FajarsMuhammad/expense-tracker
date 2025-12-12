@@ -10,6 +10,7 @@ public record UpdateCategoryRequest(
     @NotBlank(message = "Category name is required")
     @Schema(description = "New category name", example = "Monthly Groceries", requiredMode = RequiredMode.REQUIRED)
     String name,
+
     @NotNull(message = "Category type is required")
     @Schema(description = "Category type (INCOME or EXPENSE)", example = "EXPENSE", requiredMode = RequiredMode.REQUIRED)
     CategoryType type

@@ -1,16 +1,17 @@
 package com.fajars.expensetracker.report;
 
+import com.fajars.expensetracker.auth.UserIdentity;
 import com.fajars.expensetracker.common.exception.RateLimitExceededException;
 import com.fajars.expensetracker.common.ratelimit.RateLimiter;
-import com.fajars.expensetracker.common.security.UserContext;
 import com.fajars.expensetracker.report.usecase.ExportTransactions;
-import com.fajars.expensetracker.subscription.SubscriptionService;
+import com.fajars.expensetracker.subscription.SubscriptionHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -29,9 +30,8 @@ import java.util.UUID;
 public class ExportController {
 
     private final ExportTransactions exportTransactions;
-    private final UserContext userContext;
     private final RateLimiter rateLimiter;
-    private final SubscriptionService subscriptionService;
+    private final SubscriptionHelper subscriptionHelper;
 
     /**
      * Export transactions in the specified format.
@@ -56,9 +56,10 @@ public class ExportController {
             "Supports filtering by date range, wallet, category, and transaction type."
     )
     public ResponseEntity<ExportResponse> exportTransactions(
+        @AuthenticationPrincipal UserIdentity userIdentity,
         @Valid @RequestBody ExportRequest request
     ) {
-        UUID userId = userContext.getCurrentUserId();
+        UUID userId = userIdentity.getUserId();
         log.info("POST /api/v1/export/transactions - userId: {}, format: {}",
             userId, request.format());
 
@@ -72,7 +73,7 @@ public class ExportController {
         }
 
         // Check premium features
-        boolean isPremium = subscriptionService.isPremiumUser(userId);
+        boolean isPremium = subscriptionHelper.isPremiumUser(userId);
         if (!isPremium && (request.format() == ExportFormat.PDF || request.format() == ExportFormat.EXCEL)) {
             throw new IllegalArgumentException(
                 String.format("Format %s is only available for premium users. " +
