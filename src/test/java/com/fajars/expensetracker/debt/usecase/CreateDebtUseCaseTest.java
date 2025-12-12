@@ -31,6 +31,9 @@ class CreateDebtUseCaseTest {
     @Mock
     private BusinessEventLogger businessEventLogger;
 
+    @Mock
+    private com.fajars.expensetracker.subscription.SubscriptionHelper subscriptionHelper;
+
     @InjectMocks
     private CreateDebtUseCase useCase;
 
@@ -52,6 +55,9 @@ class CreateDebtUseCaseTest {
             dueDate,
             "Business loan"
         );
+
+        when(subscriptionHelper.isPremiumUser(userId)).thenReturn(false);
+        when(debtRepository.countActiveDebtsByUserId(userId)).thenReturn(5L);
 
         Debt savedDebt = Debt.builder()
             .id(UUID.randomUUID())
@@ -97,6 +103,9 @@ class CreateDebtUseCaseTest {
             null
         );
 
+        when(subscriptionHelper.isPremiumUser(userId)).thenReturn(false);
+        when(debtRepository.countActiveDebtsByUserId(userId)).thenReturn(5L);
+
         ArgumentCaptor<Debt> debtCaptor = ArgumentCaptor.forClass(Debt.class);
         when(debtRepository.save(debtCaptor.capture())).thenAnswer(i -> i.getArguments()[0]);
 
@@ -120,6 +129,9 @@ class CreateDebtUseCaseTest {
             dueDate,
             null
         );
+
+        when(subscriptionHelper.isPremiumUser(userId)).thenReturn(false);
+        when(debtRepository.countActiveDebtsByUserId(userId)).thenReturn(5L);
 
         ArgumentCaptor<Debt> debtCaptor = ArgumentCaptor.forClass(Debt.class);
         when(debtRepository.save(debtCaptor.capture())).thenAnswer(i -> i.getArguments()[0]);
@@ -145,6 +157,8 @@ class CreateDebtUseCaseTest {
             null
         );
 
+        when(subscriptionHelper.isPremiumUser(userId)).thenReturn(false);
+        when(debtRepository.countActiveDebtsByUserId(userId)).thenReturn(5L);
         when(debtRepository.save(any(Debt.class))).thenAnswer(i -> i.getArguments()[0]);
 
         // Act
@@ -167,6 +181,8 @@ class CreateDebtUseCaseTest {
             null
         );
 
+        when(subscriptionHelper.isPremiumUser(userId)).thenReturn(false);
+        when(debtRepository.countActiveDebtsByUserId(userId)).thenReturn(5L);
         when(debtRepository.save(any(Debt.class))).thenAnswer(i -> i.getArguments()[0]);
 
         // Act

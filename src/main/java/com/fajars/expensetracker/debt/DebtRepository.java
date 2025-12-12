@@ -119,4 +119,14 @@ public interface DebtRepository extends JpaRepository<Debt, UUID> {
      */
     @Query("SELECT COUNT(d) FROM Debt d WHERE d.user.id = :userId AND d.status = :status")
     Long countByUserIdAndStatus(@Param("userId") UUID userId, @Param("status") DebtStatus status);
+
+    /**
+     * Count active debts (OPEN or PARTIAL status) for a user.
+     * Used for FREE tier debt limit enforcement.
+     *
+     * @param userId the user ID
+     * @return count of active debts
+     */
+    @Query("SELECT COUNT(d) FROM Debt d WHERE d.user.id = :userId AND d.status IN ('OPEN', 'PARTIAL')")
+    Long countActiveDebtsByUserId(@Param("userId") UUID userId);
 }

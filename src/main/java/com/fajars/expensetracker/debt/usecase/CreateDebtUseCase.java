@@ -1,8 +1,10 @@
 package com.fajars.expensetracker.debt.usecase;
 
+import com.fajars.expensetracker.common.exception.BusinessException;
 import com.fajars.expensetracker.common.logging.BusinessEventLogger;
 import com.fajars.expensetracker.common.metrics.MetricsService;
 import com.fajars.expensetracker.debt.*;
+import com.fajars.expensetracker.subscription.SubscriptionHelper;
 import com.fajars.expensetracker.user.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,12 +29,18 @@ public class CreateDebtUseCase implements CreateDebt {
     private final DebtRepository debtRepository;
     private final MetricsService metricsService;
     private final BusinessEventLogger businessEventLogger;
+    private final SubscriptionHelper subscriptionHelper;
+
+    private static final int FREE_TIER_DEBT_LIMIT = 10;
 
     @Override
     @Transactional
     public DebtResponse create(UUID userId, CreateDebtRequest request) {
         long startTime = System.currentTimeMillis();
         log.debug("Creating debt for user {}: {}", userId, request);
+
+        // Check debt limit for FREE tier users
+        validateDebtLimit(userId);
 
         // Build debt entity with business rules
         Debt debt = buildDebt(userId, request);
@@ -46,6 +54,34 @@ public class CreateDebtUseCase implements CreateDebt {
 
         log.info("Debt {} created successfully for user {}", debt.getId(), userId);
         return DebtResponse.from(debt);
+    }
+
+    /**
+     * Validate debt limit for FREE tier users.
+     * PREMIUM users bypass this check.
+     *
+     * @param userId User ID
+     * @throws BusinessException if FREE user has reached debt limit
+     */
+    private void validateDebtLimit(UUID userId) {
+        // PREMIUM users have unlimited debts
+        if (subscriptionHelper.isPremiumUser(userId)) {
+            log.debug("User {} is PREMIUM - bypassing debt limit check", userId);
+            return;
+        }
+
+        // Count active debts (OPEN or PARTIAL status)
+        Long activeDebtCount = debtRepository.countActiveDebtsByUserId(userId);
+
+        if (activeDebtCount >= FREE_TIER_DEBT_LIMIT) {
+            log.warn("User {} exceeded debt limit: {}/{}", userId, activeDebtCount, FREE_TIER_DEBT_LIMIT);
+            throw BusinessException.forbidden(
+                    "You have reached the maximum limit of " + FREE_TIER_DEBT_LIMIT + " active debts for FREE tier. " +
+                    "Upgrade to PREMIUM for unlimited debt tracking."
+            );
+        }
+
+        log.debug("User {} debt count: {}/{}", userId, activeDebtCount, FREE_TIER_DEBT_LIMIT);
     }
 
     private Debt buildDebt(UUID userId, CreateDebtRequest request) {

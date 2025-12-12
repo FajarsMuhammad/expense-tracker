@@ -39,6 +39,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
           AND (t.type = COALESCE(:type, t.type))
           AND (t.date >= COALESCE(:fromDate, t.date))
           AND (t.date <= COALESCE(:toDate, t.date))
+        ORDER BY t.date DESC
         """,
         countQuery = """
         SELECT COUNT(DISTINCT t) FROM Transaction t
@@ -48,6 +49,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
           AND (t.type = COALESCE(:type, t.type))
           AND (t.date >= COALESCE(:fromDate, t.date))
           AND (t.date <= COALESCE(:toDate, t.date))
+        ORDER BY t.date DESC
         """
     )
     Page<Transaction> findByUserIdWithFilters(
@@ -58,6 +60,32 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
         @Param("fromDate") LocalDateTime fromDate,
         @Param("toDate") LocalDateTime toDate,
         Pageable pageable
+    );
+
+    /**
+     * Calculate total income and expense for filtered transactions.
+     * This is optimized to run alongside findByUserIdWithFilters without fetching all entities.
+     */
+    @Query("""
+        SELECT
+            COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0) as totalIncome,
+            COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0) as totalExpense,
+            COUNT(t) as transactionCount
+        FROM Transaction t
+        WHERE t.user.id = :userId
+          AND (t.wallet.id = COALESCE(:walletId, t.wallet.id))
+          AND (t.category.id = COALESCE(:categoryId, t.category.id))
+          AND (t.type = COALESCE(:type, t.type))
+          AND (t.date >= COALESCE(:fromDate, t.date))
+          AND (t.date <= COALESCE(:toDate, t.date))
+    """)
+    TransactionSummary getTotalsByFilters(
+        @Param("userId") UUID userId,
+        @Param("walletId") UUID walletId,
+        @Param("categoryId") UUID categoryId,
+        @Param("type") TransactionType type,
+        @Param("fromDate") LocalDateTime fromDate,
+        @Param("toDate") LocalDateTime toDate
     );
 
 

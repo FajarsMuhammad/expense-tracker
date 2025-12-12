@@ -1,7 +1,7 @@
 package com.fajars.expensetracker.category;
 
 import com.fajars.expensetracker.category.usecase.*;
-import com.fajars.expensetracker.user.UserDto;
+import com.fajars.expensetracker.user.UserResponse;
 import com.fajars.expensetracker.user.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -155,7 +155,7 @@ public class CategoryController {
             throw new IllegalStateException("User not authenticated");
         }
         String email = auth.getName();
-        UserDto user = userService.getByEmail(email);
+        UserResponse user = userService.getByEmail(email);
         return user.id();
     }
 }

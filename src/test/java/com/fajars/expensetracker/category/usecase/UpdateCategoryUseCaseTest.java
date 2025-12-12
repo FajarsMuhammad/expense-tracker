@@ -1,24 +1,26 @@
 package com.fajars.expensetracker.category.usecase;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.fajars.expensetracker.category.Category;
-import com.fajars.expensetracker.category.CategoryResponse;
 import com.fajars.expensetracker.category.CategoryRepository;
+import com.fajars.expensetracker.category.CategoryResponse;
 import com.fajars.expensetracker.category.CategoryType;
 import com.fajars.expensetracker.category.UpdateCategoryRequest;
+import java.util.Date;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Date;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class UpdateCategoryUseCaseTest {
@@ -53,7 +55,7 @@ class UpdateCategoryUseCaseTest {
     @Test
     void update_ShouldUpdateCategory_WhenValidRequest() {
         // Arrange
-        UpdateCategoryRequest request = new UpdateCategoryRequest("Updated Name");
+        UpdateCategoryRequest request = new UpdateCategoryRequest("Updated Name", CategoryType.EXPENSE);
         when(categoryRepository.findByIdAndUserId(categoryId, userId)).thenReturn(Optional.of(userCategory));
         when(categoryRepository.save(any(Category.class))).thenReturn(userCategory);
 
@@ -69,7 +71,7 @@ class UpdateCategoryUseCaseTest {
     @Test
     void update_ShouldThrowException_WhenCategoryNotFound() {
         // Arrange
-        UpdateCategoryRequest request = new UpdateCategoryRequest("Updated Name");
+        UpdateCategoryRequest request = new UpdateCategoryRequest("Updated Name", CategoryType.EXPENSE);
         when(categoryRepository.findByIdAndUserId(categoryId, userId)).thenReturn(Optional.empty());
 
         // Act & Assert
@@ -80,10 +82,12 @@ class UpdateCategoryUseCaseTest {
     @Test
     void update_ShouldThrowException_WhenNameIsEmpty() {
         // Arrange
-        UpdateCategoryRequest request = new UpdateCategoryRequest("");
+        UpdateCategoryRequest request = new UpdateCategoryRequest("", CategoryType.EXPENSE);
+        // Note: No need to stub findByIdAndUserId since validation happens before repository call
 
         // Act & Assert
         assertThrows(IllegalArgumentException.class, () -> useCase.update(userId, categoryId, request));
+        verify(categoryRepository, never()).findByIdAndUserId(any(), any());
         verify(categoryRepository, never()).save(any());
     }
 
@@ -97,7 +101,7 @@ class UpdateCategoryUseCaseTest {
                 .type(CategoryType.INCOME)
                 .createdAt(new Date())
                 .build();
-        UpdateCategoryRequest request = new UpdateCategoryRequest("Updated Name");
+        UpdateCategoryRequest request = new UpdateCategoryRequest("Updated Name", CategoryType.EXPENSE);
         when(categoryRepository.findByIdAndUserId(categoryId, userId)).thenReturn(Optional.of(defaultCategory));
 
         // Act & Assert

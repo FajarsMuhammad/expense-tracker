@@ -2,7 +2,7 @@ package com.fajars.expensetracker.report.usecase;
 
 import com.fajars.expensetracker.report.Granularity;
 import com.fajars.expensetracker.report.ReportFilter;
-import com.fajars.expensetracker.report.TrendDataDto;
+import com.fajars.expensetracker.report.TrendDataResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -20,5 +20,5 @@ public interface GetIncomeExpenseTrend {
      * @param granularity the time granularity (DAILY, WEEKLY, MONTHLY)
      * @return list of trend data points ordered by date
      */
-    List<TrendDataDto> get(UUID userId, ReportFilter filter, Granularity granularity);
+    List<TrendDataResponse> get(UUID userId, ReportFilter filter, Granularity granularity);
 }

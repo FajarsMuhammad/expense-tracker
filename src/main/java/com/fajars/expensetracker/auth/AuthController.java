@@ -1,18 +1,16 @@
 package com.fajars.expensetracker.auth;
 
-import com.fajars.expensetracker.auth.*;
-import com.fajars.expensetracker.auth.AuthService;
-import com.fajars.expensetracker.auth.AuthResponse;
-import com.fajars.expensetracker.auth.LoginRequest;
-import com.fajars.expensetracker.auth.RefreshRequest;
-import com.fajars.expensetracker.auth.RegisterRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
+
     private final AuthService authService;
 
     public AuthController(AuthService authService) {

@@ -1,7 +1,6 @@
 package com.fajars.expensetracker.dashboard.usecase;
 
-import com.fajars.expensetracker.dashboard.DashboardSummaryDto;
-import com.fajars.expensetracker.transaction.Transaction;
+import com.fajars.expensetracker.dashboard.DashboardSummaryResponse;
 import com.fajars.expensetracker.transaction.TransactionRepository;
 import com.fajars.expensetracker.wallet.Currency;
 import com.fajars.expensetracker.wallet.Wallet;
@@ -65,7 +64,7 @@ class GetDashboardSummaryUseCaseTest {
                 .thenReturn(new ArrayList<>());
 
         // Act
-        DashboardSummaryDto result = useCase.getSummary(userId, walletId);
+        DashboardSummaryResponse result = useCase.getSummary(userId, walletId);
 
         // Assert
         assertNotNull(result);
@@ -87,7 +86,7 @@ class GetDashboardSummaryUseCaseTest {
                 .thenReturn(new ArrayList<>());
 
         // Act
-        DashboardSummaryDto result = useCase.getSummary(userId, null);
+        DashboardSummaryResponse result = useCase.getSummary(userId, null);
 
         // Assert
         assertNotNull(result);
@@ -107,7 +106,7 @@ class GetDashboardSummaryUseCaseTest {
                 .thenReturn(new ArrayList<>());
 
         // Act
-        DashboardSummaryDto result = useCase.getSummary(userId, walletId);
+        DashboardSummaryResponse result = useCase.getSummary(userId, walletId);
 
         // Assert
         assertNotNull(result);
@@ -125,7 +124,7 @@ class GetDashboardSummaryUseCaseTest {
                 .thenReturn(new ArrayList<>());
 
         // Act
-        DashboardSummaryDto result = useCase.getSummary(userId, null);
+        DashboardSummaryResponse result = useCase.getSummary(userId, null);
 
         // Assert
         assertNotNull(result);

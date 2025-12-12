@@ -41,7 +41,11 @@
       "Bash(find:*)",
       "Bash(tree:*)",
       "Bash(docker build:*)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(xargs:*)",
+      "Bash(./gradlew bootJar:*)",
+      "Bash(ls:*)",
+      "Bash(./gradlew compileTestJava:*)"
     ],
     "deny": [],
     "ask": []
