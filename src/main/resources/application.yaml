@@ -24,6 +24,7 @@ spring:
 
 server:
   port: 8081
+  address: 0.0.0.0
   servlet:
     context-path: /api/v1
 
@@ -38,8 +39,8 @@ jwt:
 # Get your keys from: https://dashboard.midtrans.com/ (Account > Access Keys)
 # Sandbox for testing, Production for live transactions
 midtrans:
-  server-key: ${MIDTRANS_SERVER_KEY:SB-Mid-server-YOUR_SANDBOX_SERVER_KEY}
-  client-key: ${MIDTRANS_CLIENT_KEY:SB-Mid-client-YOUR_SANDBOX_CLIENT_KEY}
+  server-key: ${MIDTRANS_SERVER_KEY}
+  client-key: ${MIDTRANS_CLIENT_KEY}
   api-url: ${MIDTRANS_API_URL:https://app.sandbox.midtrans.com}
   is-production: ${MIDTRANS_IS_PRODUCTION:false}
 
@@ -70,6 +71,8 @@ app:
   wallet:
     default-name: ${DEFAULT_WALLET_NAME:Dompet Saya}
     default-currency: ${DEFAULT_WALLET_CURRENCY:IDR}
+  subscription:
+    trial-days: ${TRIAL_DAYS:14}  # Trial duration in days (default: 14)
 
 # Logging Configuration
 logging:

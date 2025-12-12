@@ -81,4 +81,17 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
            "AND s.plan = 'PREMIUM' " +
            "AND s.status IN ('ACTIVE', 'TRIAL', 'EXPIRED')")
     boolean hasHadPremiumSubscription(@Param("userId") UUID userId);
+
+    /**
+     * Check if user has ever had a trial subscription (including registration trial).
+     * Used to enforce one-time trial policy.
+     *
+     * @param userId the user ID
+     * @return true if user has ever had trial status
+     */
+    @Query("SELECT CASE WHEN COUNT(s) > 0 THEN true ELSE false END " +
+           "FROM Subscription s " +
+           "WHERE s.user.id = :userId " +
+           "AND s.status = 'TRIAL'")
+    boolean hasHadTrialSubscription(@Param("userId") UUID userId);
 }

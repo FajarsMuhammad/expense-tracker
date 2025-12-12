@@ -42,7 +42,11 @@ public class RateLimiter {
      *
      * @param userId user ID
      * @return true if allowed, false if rate limit exceeded
+     * @deprecated Since Milestone 6. Export is now premium-only, rate limiting no longer needed.
+     *             Access control enforced via AOP {@link com.fajars.expensetracker.common.security.RequiresPremium}.
+     *             This method is kept for backward compatibility but will be removed in future versions.
      */
+    @Deprecated(since = "Milestone 6", forRemoval = true)
     public boolean allowExport(UUID userId) {
         return allow(userId, "export", EXPORT_LIMIT_PER_MINUTE);
     }
@@ -83,7 +87,10 @@ public class RateLimiter {
      *
      * @param userId user ID
      * @return remaining requests in current window
+     * @deprecated Since Milestone 6. Export is now premium-only, rate limiting no longer needed.
+     *             This method is kept for backward compatibility but will be removed in future versions.
      */
+    @Deprecated(since = "Milestone 6", forRemoval = true)
     public int getRemainingExports(UUID userId) {
         String key = userId + ":export";
         AtomicInteger counter = cache.getIfPresent(key);

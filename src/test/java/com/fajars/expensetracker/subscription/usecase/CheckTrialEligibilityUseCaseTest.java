@@ -39,6 +39,7 @@ class CheckTrialEligibilityUseCaseTest {
     @Test
     void isEligible_ShouldReturnTrue_WhenUserNeverHadPremiumAndNoPayment() {
         // Arrange
+        when(subscriptionRepository.hasHadTrialSubscription(userId)).thenReturn(false);
         when(subscriptionRepository.hasHadPremiumSubscription(userId)).thenReturn(false);
         when(paymentRepository.hasSuccessfulPayment(userId)).thenReturn(false);
 
@@ -47,6 +48,7 @@ class CheckTrialEligibilityUseCaseTest {
 
         // Assert
         assertTrue(result);
+        verify(subscriptionRepository).hasHadTrialSubscription(userId);
         verify(subscriptionRepository).hasHadPremiumSubscription(userId);
         verify(paymentRepository).hasSuccessfulPayment(userId);
     }
@@ -54,6 +56,7 @@ class CheckTrialEligibilityUseCaseTest {
     @Test
     void isEligible_ShouldReturnFalse_WhenUserHadPremiumBefore() {
         // Arrange
+        when(subscriptionRepository.hasHadTrialSubscription(userId)).thenReturn(false);
         when(subscriptionRepository.hasHadPremiumSubscription(userId)).thenReturn(true);
 
         // Act
@@ -61,6 +64,7 @@ class CheckTrialEligibilityUseCaseTest {
 
         // Assert
         assertFalse(result);
+        verify(subscriptionRepository).hasHadTrialSubscription(userId);
         verify(subscriptionRepository).hasHadPremiumSubscription(userId);
         verify(paymentRepository, never()).hasSuccessfulPayment(any()); // Should short-circuit
     }
@@ -68,6 +72,7 @@ class CheckTrialEligibilityUseCaseTest {
     @Test
     void isEligible_ShouldReturnFalse_WhenUserHasSuccessfulPayment() {
         // Arrange
+        when(subscriptionRepository.hasHadTrialSubscription(userId)).thenReturn(false);
         when(subscriptionRepository.hasHadPremiumSubscription(userId)).thenReturn(false);
         when(paymentRepository.hasSuccessfulPayment(userId)).thenReturn(true);
 
@@ -76,6 +81,7 @@ class CheckTrialEligibilityUseCaseTest {
 
         // Assert
         assertFalse(result);
+        verify(subscriptionRepository).hasHadTrialSubscription(userId);
         verify(subscriptionRepository).hasHadPremiumSubscription(userId);
         verify(paymentRepository).hasSuccessfulPayment(userId);
     }
@@ -83,15 +89,32 @@ class CheckTrialEligibilityUseCaseTest {
     @Test
     void isEligible_ShouldReturnFalse_WhenUserHadPremiumAndHasPayment() {
         // Arrange
+        when(subscriptionRepository.hasHadTrialSubscription(userId)).thenReturn(false);
         when(subscriptionRepository.hasHadPremiumSubscription(userId)).thenReturn(true);
-        when(paymentRepository.hasSuccessfulPayment(userId)).thenReturn(true);
 
         // Act
         boolean result = useCase.isEligible(userId);
 
         // Assert
         assertFalse(result);
+        verify(subscriptionRepository).hasHadTrialSubscription(userId);
         verify(subscriptionRepository).hasHadPremiumSubscription(userId);
         // Payment check is skipped due to short-circuit
+    }
+
+    @Test
+    void isEligible_ShouldReturnFalse_WhenUserAlreadyHadTrial() {
+        // Arrange - User had trial at registration
+        when(subscriptionRepository.hasHadTrialSubscription(userId)).thenReturn(true);
+
+        // Act
+        boolean result = useCase.isEligible(userId);
+
+        // Assert
+        assertFalse(result);
+        verify(subscriptionRepository).hasHadTrialSubscription(userId);
+        // Should short-circuit - no need to check premium or payment
+        verify(subscriptionRepository, never()).hasHadPremiumSubscription(any());
+        verify(paymentRepository, never()).hasSuccessfulPayment(any());
     }
 }
