@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM eclipse-temurin:21-jdk AS build
+FROM eclipse-temurin:25-jdk AS build
 WORKDIR /app
 
 # Copy gradle wrapper
@@ -19,7 +19,7 @@ COPY src ./src
 RUN ./gradlew bootJar --no-daemon
 
 # Stage 2: Runtime
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 
 # Create logs directory

@@ -75,7 +75,8 @@ public class GetDashboardSummaryUseCase implements GetDashboardSummary {
             recentTransactions = recentTransactions.subList(0, 5);
         }
 
-        List<TransactionSummaryResponse> recentTransactionDtos = recentTransactions.stream().limit(5)
+        List<TransactionSummaryResponse> recentTransactionDtos = recentTransactions.stream()
+            .limit(5)
             .map(TransactionSummaryResponse::from).toList();
 
         DashboardSummaryResponse result = new DashboardSummaryResponse(walletBalance, todayIncome,
@@ -110,22 +111,26 @@ public class GetDashboardSummaryUseCase implements GetDashboardSummary {
         } else {
             // Sum all wallets
             List<Wallet> wallets = walletRepository.findByUserId(userId);
-            double totalBalance = 0.0;
-            for (Wallet wallet : wallets) {
-                double balance = wallet.getInitialBalance();
-                if (wallet.getTransactions() != null) {
-                    for (Transaction t : wallet.getTransactions()) {
-                        if ("INCOME".equals(t.getType().name())) {
-                            balance += t.getAmount();
-                        } else if ("EXPENSE".equals(t.getType().name())) {
-                            balance -= t.getAmount();
-                        }
+            return getTotalBalance(wallets);
+        }
+    }
+
+    private double getTotalBalance(List<Wallet> wallets) {
+        double totalBalance = 0.0;
+        for (Wallet wallet : wallets) {
+            double balance = wallet.getInitialBalance();
+            if (wallet.getTransactions() != null) {
+                for (Transaction t : wallet.getTransactions()) {
+                    if ("INCOME".equals(t.getType().name())) {
+                        balance += t.getAmount();
+                    } else if ("EXPENSE".equals(t.getType().name())) {
+                        balance -= t.getAmount();
                     }
                 }
-                totalBalance += balance;
             }
-            return totalBalance;
+            totalBalance += balance;
         }
+        return totalBalance;
     }
 
     private List<WeeklyTrendResponse> calculateWeeklyTrend(UUID userId, UUID walletId) {
