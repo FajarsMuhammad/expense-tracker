@@ -1,7 +1,7 @@
 package com.fajars.expensetracker.dashboard;
 
 import com.fajars.expensetracker.dashboard.usecase.GetDashboardSummary;
-import com.fajars.expensetracker.user.UserDto;
+import com.fajars.expensetracker.user.UserResponse;
 import com.fajars.expensetracker.user.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -35,15 +35,15 @@ public class DashboardController {
             description = "Get financial summary including wallet balance, today's income/expense, weekly trends, and recent transactions. Optionally filter by wallet ID.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved dashboard summary",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = DashboardSummaryDto.class))),
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = DashboardSummaryResponse.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing JWT token", content = @Content)
     })
     @GetMapping("/summary")
-    public ResponseEntity<DashboardSummaryDto> getSummary(
+    public ResponseEntity<DashboardSummaryResponse> getSummary(
             @Parameter(description = "Optional wallet ID to filter summary by specific wallet", required = false)
             @RequestParam(required = false) UUID walletId) {
         UUID userId = getCurrentUserId();
-        DashboardSummaryDto summary = getDashboardSummary.getSummary(userId, walletId);
+        DashboardSummaryResponse summary = getDashboardSummary.getSummary(userId, walletId);
         return ResponseEntity.ok(summary);
     }
 
@@ -53,7 +53,7 @@ public class DashboardController {
             throw new IllegalStateException("User not authenticated");
         }
         String email = auth.getName();
-        UserDto user = userService.getByEmail(email);
+        UserResponse user = userService.getByEmail(email);
         return user.id();
     }
 }

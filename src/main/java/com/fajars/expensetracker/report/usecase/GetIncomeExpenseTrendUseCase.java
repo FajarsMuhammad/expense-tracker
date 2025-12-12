@@ -3,7 +3,7 @@ package com.fajars.expensetracker.report.usecase;
 import com.fajars.expensetracker.common.metrics.MetricsService;
 import com.fajars.expensetracker.report.Granularity;
 import com.fajars.expensetracker.report.ReportFilter;
-import com.fajars.expensetracker.report.TrendDataDto;
+import com.fajars.expensetracker.report.TrendDataResponse;
 import com.fajars.expensetracker.transaction.TransactionRepository;
 import com.fajars.expensetracker.transaction.projection.TrendData;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +12,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.Date;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -36,7 +35,7 @@ public class GetIncomeExpenseTrendUseCase implements GetIncomeExpenseTrend {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "trendData", key = "#userId + '-' + #filter.startDate() + '-' + #filter.endDate() + '-' + #granularity")
-    public List<TrendDataDto> get(UUID userId, ReportFilter filter, Granularity granularity) {
+    public List<TrendDataResponse> get(UUID userId, ReportFilter filter, Granularity granularity) {
         long startTime = System.currentTimeMillis();
         log.debug("Getting trend data for user {} with granularity {}", userId, granularity);
 
@@ -49,10 +48,10 @@ public class GetIncomeExpenseTrendUseCase implements GetIncomeExpenseTrend {
         );
 
         // Convert to DTO
-        Map<LocalDate, TrendDataDto> trendMap = results.stream()
+        Map<LocalDate, TrendDataResponse> trendMap = results.stream()
             .collect(Collectors.toMap(
                 TrendData::getDate,
-                row -> new TrendDataDto(
+                row -> new TrendDataResponse(
                     row.getDate(),
                     row.getTotalIncome().doubleValue(),
                     row.getTotalExpense().doubleValue()
@@ -62,7 +61,7 @@ public class GetIncomeExpenseTrendUseCase implements GetIncomeExpenseTrend {
             ));
 
         // Fill gaps with zero values (important for charts)
-        List<TrendDataDto> completeData = fillGaps(
+        List<TrendDataResponse> completeData = fillGaps(
             trendMap,
             filter.startDate().toLocalDate(),
             filter.endDate().toLocalDate(),
@@ -70,7 +69,7 @@ public class GetIncomeExpenseTrendUseCase implements GetIncomeExpenseTrend {
         );
 
         // Apply granularity aggregation if needed
-        List<TrendDataDto> aggregatedData = applyGranularity(completeData, granularity);
+        List<TrendDataResponse> aggregatedData = applyGranularity(completeData, granularity);
 
         metricsService.recordTimer("report.trend.generation.duration", startTime);
         log.info("Generated {} trend data points for user {} in {}ms",
@@ -84,19 +83,19 @@ public class GetIncomeExpenseTrendUseCase implements GetIncomeExpenseTrend {
      * This ensures the chart displays smoothly even when there are no transactions on certain days.
      * Data is returned in descending order (most recent first).
      */
-    private List<TrendDataDto> fillGaps(
-        Map<LocalDate, TrendDataDto> dataMap,
+    private List<TrendDataResponse> fillGaps(
+        Map<LocalDate, TrendDataResponse> dataMap,
         LocalDate startDate,
         LocalDate endDate,
         Granularity granularity
     ) {
-        List<TrendDataDto> result = new ArrayList<>();
+        List<TrendDataResponse> result = new ArrayList<>();
         LocalDate currentDate = endDate; // Start from end date for descending order
 
         while (!currentDate.isBefore(startDate)) {
-            TrendDataDto data = dataMap.getOrDefault(
+            TrendDataResponse data = dataMap.getOrDefault(
                 currentDate,
-                new TrendDataDto(currentDate, 0.0, 0.0)
+                new TrendDataResponse(currentDate, 0.0, 0.0)
             );
             result.add(data);
 
@@ -115,12 +114,12 @@ public class GetIncomeExpenseTrendUseCase implements GetIncomeExpenseTrend {
      * Apply granularity aggregation.
      * For WEEKLY and MONTHLY, aggregate daily data into larger periods.
      */
-    private List<TrendDataDto> applyGranularity(List<TrendDataDto> dailyData, Granularity granularity) {
+    private List<TrendDataResponse> applyGranularity(List<TrendDataResponse> dailyData, Granularity granularity) {
         if (granularity == Granularity.DAILY) {
             return dailyData;  // No aggregation needed
         }
 
-        Map<LocalDate, List<TrendDataDto>> grouped = dailyData.stream()
+        Map<LocalDate, List<TrendDataResponse>> grouped = dailyData.stream()
             .collect(Collectors.groupingBy(
                 dto -> getPeriodStart(dto.date(), granularity),
                 LinkedHashMap::new,
@@ -130,17 +129,17 @@ public class GetIncomeExpenseTrendUseCase implements GetIncomeExpenseTrend {
         return grouped.entrySet().stream()
             .map(entry -> {
                 LocalDate periodStart = entry.getKey();
-                List<TrendDataDto> periodData = entry.getValue();
+                List<TrendDataResponse> periodData = entry.getValue();
 
                 Double totalIncome = periodData.stream()
-                    .mapToDouble(TrendDataDto::income)
+                    .mapToDouble(TrendDataResponse::income)
                     .sum();
 
                 Double totalExpense = periodData.stream()
-                    .mapToDouble(TrendDataDto::expense)
+                    .mapToDouble(TrendDataResponse::expense)
                     .sum();
 
-                return new TrendDataDto(periodStart, totalIncome, totalExpense);
+                return new TrendDataResponse(periodStart, totalIncome, totalExpense);
             })
             .toList();
     }

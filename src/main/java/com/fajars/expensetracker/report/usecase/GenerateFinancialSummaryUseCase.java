@@ -2,10 +2,10 @@ package com.fajars.expensetracker.report.usecase;
 
 import com.fajars.expensetracker.common.logging.BusinessEventLogger;
 import com.fajars.expensetracker.common.metrics.MetricsService;
-import com.fajars.expensetracker.report.CategoryBreakdownDto;
+import com.fajars.expensetracker.report.CategoryBreakdownResponse;
 import com.fajars.expensetracker.report.FinancialSummaryResponse;
 import com.fajars.expensetracker.report.ReportFilter;
-import com.fajars.expensetracker.report.WalletBalanceDto;
+import com.fajars.expensetracker.report.WalletBalanceResponse;
 import com.fajars.expensetracker.transaction.TransactionRepository;
 import com.fajars.expensetracker.transaction.TransactionType;
 import com.fajars.expensetracker.transaction.projection.CategoryBreakdown;
@@ -63,16 +63,16 @@ public class GenerateFinancialSummaryUseCase implements GenerateFinancialSummary
         Long transactionCount = summary.getTransactionCount();
 
         // 2. Get category breakdowns (2 separate queries for income and expense)
-        List<CategoryBreakdownDto> incomeByCategory = getCategoryBreakdown(
+        List<CategoryBreakdownResponse> incomeByCategory = getCategoryBreakdown(
             userId, filter, TransactionType.INCOME, totalIncome
         );
 
-        List<CategoryBreakdownDto> expenseByCategory = getCategoryBreakdown(
+        List<CategoryBreakdownResponse> expenseByCategory = getCategoryBreakdown(
             userId, filter, TransactionType.EXPENSE, totalExpense
         );
 
         // 3. Get wallet balances
-        List<WalletBalanceDto> walletBalances = getWalletBalances(userId, filter);
+        List<WalletBalanceResponse> walletBalances = getWalletBalances(userId, filter);
 
         // 4. Build response
         FinancialSummaryResponse response = new FinancialSummaryResponse(
@@ -112,7 +112,7 @@ public class GenerateFinancialSummaryUseCase implements GenerateFinancialSummary
      * @param total the total amount for percentage calculation
      * @return list of category breakdowns sorted by amount DESC
      */
-    private List<CategoryBreakdownDto> getCategoryBreakdown(
+    private List<CategoryBreakdownResponse> getCategoryBreakdown(
         UUID userId,
         ReportFilter filter,
         TransactionType type,
@@ -127,7 +127,7 @@ public class GenerateFinancialSummaryUseCase implements GenerateFinancialSummary
         );
 
         return results.stream()
-            .map(row -> new CategoryBreakdownDto(
+            .map(row -> new CategoryBreakdownResponse(
                 row.getCategoryId(),
                 row.getCategoryName(),
                 type.name(),
@@ -152,7 +152,7 @@ public class GenerateFinancialSummaryUseCase implements GenerateFinancialSummary
      * Get current wallet balances.
      * Handles both filtered and all wallets scenarios.
      */
-    private List<WalletBalanceDto> getWalletBalances(UUID userId, ReportFilter filter) {
+    private List<WalletBalanceResponse> getWalletBalances(UUID userId, ReportFilter filter) {
         List<Wallet> wallets;
 
         if (filter.hasWalletFilter()) {
@@ -169,10 +169,10 @@ public class GenerateFinancialSummaryUseCase implements GenerateFinancialSummary
     /**
      * Convert Wallet entity to WalletBalanceDto with calculated current balance.
      */
-    private WalletBalanceDto toWalletBalanceDto(Wallet wallet) {
+    private WalletBalanceResponse toWalletBalanceDto(Wallet wallet) {
         Double currentBalance = calculateCurrentBalance(wallet);
 
-        return new WalletBalanceDto(
+        return new WalletBalanceResponse(
             wallet.getId(),
             wallet.getName(),
             wallet.getCurrency().name(),

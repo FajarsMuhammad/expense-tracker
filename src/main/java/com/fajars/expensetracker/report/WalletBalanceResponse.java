@@ -8,7 +8,7 @@ import java.util.UUID;
  * Current wallet balance information.
  */
 @Schema(description = "Wallet balance information")
-public record WalletBalanceDto(
+public record WalletBalanceResponse(
 
     @Schema(description = "Wallet ID")
     UUID walletId,

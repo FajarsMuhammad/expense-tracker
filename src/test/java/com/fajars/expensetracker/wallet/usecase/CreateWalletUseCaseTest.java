@@ -27,6 +27,9 @@ class CreateWalletUseCaseTest {
     @Mock
     private com.fajars.expensetracker.common.logging.BusinessEventLogger businessEventLogger;
 
+    @Mock
+    private com.fajars.expensetracker.subscription.SubscriptionHelper subscriptionHelper;
+
     @InjectMocks
     private CreateWalletUseCase useCase;
 
@@ -41,6 +44,7 @@ class CreateWalletUseCaseTest {
     void create_ShouldCreateWallet_WhenValidRequest() {
         // Arrange
         CreateWalletRequest request = new CreateWalletRequest("Main Wallet", Currency.IDR, 1000000.0);
+        when(subscriptionHelper.isPremiumUser(userId)).thenReturn(false);
         when(walletRepository.countByUserId(userId)).thenReturn(0L);
 
         Wallet savedWallet = Wallet.builder()
@@ -71,6 +75,7 @@ class CreateWalletUseCaseTest {
     void create_ShouldThrowException_WhenWalletLimitExceeded() {
         // Arrange
         CreateWalletRequest request = new CreateWalletRequest("Second Wallet", Currency.IDR, 1000000.0);
+        when(subscriptionHelper.isPremiumUser(userId)).thenReturn(false);
         when(walletRepository.countByUserId(userId)).thenReturn(1L);
 
         // Act & Assert
@@ -83,6 +88,7 @@ class CreateWalletUseCaseTest {
     void create_ShouldThrowException_WhenNameIsEmpty() {
         // Arrange
         CreateWalletRequest request = new CreateWalletRequest("", Currency.IDR, 1000000.0);
+        when(subscriptionHelper.isPremiumUser(userId)).thenReturn(false);
         when(walletRepository.countByUserId(userId)).thenReturn(0L);
 
         // Act & Assert
@@ -94,6 +100,7 @@ class CreateWalletUseCaseTest {
     void create_ShouldThrowException_WhenInitialBalanceIsNegative() {
         // Arrange
         CreateWalletRequest request = new CreateWalletRequest("Wallet", Currency.IDR, -100.0);
+        when(subscriptionHelper.isPremiumUser(userId)).thenReturn(false);
         when(walletRepository.countByUserId(userId)).thenReturn(0L);
 
         // Act & Assert

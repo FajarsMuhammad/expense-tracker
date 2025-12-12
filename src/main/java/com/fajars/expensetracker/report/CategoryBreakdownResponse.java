@@ -9,7 +9,7 @@ import java.util.UUID;
  * Shows total amount and percentage for a specific category.
  */
 @Schema(description = "Category breakdown with amount and percentage")
-public record CategoryBreakdownDto(
+public record CategoryBreakdownResponse(
 
     @Schema(description = "Category ID")
     UUID categoryId,

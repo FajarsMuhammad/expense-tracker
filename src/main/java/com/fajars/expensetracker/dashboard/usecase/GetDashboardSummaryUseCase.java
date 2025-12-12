@@ -1,11 +1,11 @@
 package com.fajars.expensetracker.dashboard.usecase;
 
 import com.fajars.expensetracker.common.metrics.MetricsService;
-import com.fajars.expensetracker.dashboard.DashboardSummaryDto;
-import com.fajars.expensetracker.dashboard.WeeklyTrendDto;
+import com.fajars.expensetracker.dashboard.DashboardSummaryResponse;
+import com.fajars.expensetracker.dashboard.WeeklyTrendResponse;
 import com.fajars.expensetracker.transaction.Transaction;
 import com.fajars.expensetracker.transaction.TransactionRepository;
-import com.fajars.expensetracker.transaction.TransactionSummaryDto;
+import com.fajars.expensetracker.transaction.TransactionSummaryResponse;
 import com.fajars.expensetracker.wallet.Wallet;
 import com.fajars.expensetracker.wallet.WalletRepository;
 import java.time.LocalDate;
@@ -29,7 +29,7 @@ public class GetDashboardSummaryUseCase implements GetDashboardSummary {
 
     @Override
     @Transactional(readOnly = true)
-    public DashboardSummaryDto getSummary(UUID userId, UUID walletId) {
+    public DashboardSummaryResponse getSummary(UUID userId, UUID walletId) {
         long startTime = System.currentTimeMillis();
 
         // Get wallet balance
@@ -59,7 +59,7 @@ public class GetDashboardSummaryUseCase implements GetDashboardSummary {
             .mapToDouble(Transaction::getAmount).sum();
 
         // Get weekly trend (last 7 days)
-        List<WeeklyTrendDto> weeklyTrend = calculateWeeklyTrend(userId, walletId);
+        List<WeeklyTrendResponse> weeklyTrend = calculateWeeklyTrend(userId, walletId);
 
         // Get recent transactions (top 5)
         List<Transaction> recentTransactions;
@@ -75,12 +75,12 @@ public class GetDashboardSummaryUseCase implements GetDashboardSummary {
             recentTransactions = recentTransactions.subList(0, 5);
         }
 
-        List<TransactionSummaryDto> recentTransactionDtos = recentTransactions.stream().limit(5)
-            .map(TransactionSummaryDto::from).toList();
+        List<TransactionSummaryResponse> recentTransactionDtos = recentTransactions.stream().limit(5)
+            .map(TransactionSummaryResponse::from).toList();
 
-        DashboardSummaryDto result = new DashboardSummaryDto(walletBalance, todayIncome,
-                                                             todayExpense, weeklyTrend,
-                                                             recentTransactionDtos);
+        DashboardSummaryResponse result = new DashboardSummaryResponse(walletBalance, todayIncome,
+                                                                       todayExpense, weeklyTrend,
+                                                                       recentTransactionDtos);
 
         // Record timing metric
         metricsService.recordTimer("dashboard.summary.generation.duration", startTime);
@@ -128,7 +128,7 @@ public class GetDashboardSummaryUseCase implements GetDashboardSummary {
         }
     }
 
-    private List<WeeklyTrendDto> calculateWeeklyTrend(UUID userId, UUID walletId) {
+    private List<WeeklyTrendResponse> calculateWeeklyTrend(UUID userId, UUID walletId) {
         ZoneId zoneId = ZoneId.systemDefault();
         LocalDate today = LocalDate.now(zoneId);
 
@@ -171,7 +171,7 @@ public class GetDashboardSummaryUseCase implements GetDashboardSummary {
                     .mapToDouble(Transaction::getAmount)
                     .sum();
 
-                return new WeeklyTrendDto(entry.getKey(), income, expense);
+                return new WeeklyTrendResponse(entry.getKey(), income, expense);
             }).collect(Collectors.toList());
     }
 }

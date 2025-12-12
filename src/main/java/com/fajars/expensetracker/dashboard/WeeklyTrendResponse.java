@@ -2,7 +2,7 @@ package com.fajars.expensetracker.dashboard;
 
 import java.time.LocalDate;
 
-public record WeeklyTrendDto(
+public record WeeklyTrendResponse(
     LocalDate date,
     Double income,
     Double expense

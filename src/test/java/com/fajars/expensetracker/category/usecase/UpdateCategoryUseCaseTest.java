@@ -83,10 +83,11 @@ class UpdateCategoryUseCaseTest {
     void update_ShouldThrowException_WhenNameIsEmpty() {
         // Arrange
         UpdateCategoryRequest request = new UpdateCategoryRequest("", CategoryType.EXPENSE);
-        when(categoryRepository.findByIdAndUserId(categoryId, userId)).thenReturn(Optional.of(userCategory));
+        // Note: No need to stub findByIdAndUserId since validation happens before repository call
 
         // Act & Assert
         assertThrows(IllegalArgumentException.class, () -> useCase.update(userId, categoryId, request));
+        verify(categoryRepository, never()).findByIdAndUserId(any(), any());
         verify(categoryRepository, never()).save(any());
     }
 

@@ -9,7 +9,7 @@ import java.time.LocalDate;
  * Used for income/expense trends over time.
  */
 @Schema(description = "Time series data point for trend charts")
-public record TrendDataDto(
+public record TrendDataResponse(
 
     @Schema(description = "Date of the data point", example = "2025-12-01")
     LocalDate date,
@@ -24,7 +24,7 @@ public record TrendDataDto(
     Double balance
 ) {
 
-    public TrendDataDto(LocalDate date, Double income, Double expense) {
+    public TrendDataResponse(LocalDate date, Double income, Double expense) {
         this(date, income, expense, income - expense);
     }
 }
