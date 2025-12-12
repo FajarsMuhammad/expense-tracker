@@ -960,7 +960,7 @@ Upgrade to PREMIUM for just IDR 25,000/month: [Upgrade Link]
 ### Internal Documentation
 - [Subscription Architecture](../milestone_5/SUBSCRIPTION_ARCHITECTURE.md)
 - [Premium Feature Impact Analysis](../milestone_5/PREMIUM_FEATURE_IMPACT_ANALYSIS.md)
-- [Midtrans Integration Guide](../../documentations/MIDTRANS_INTEGRATION_GUIDE.md)
+- [Midtrans Integration Guide](../../MIDTRANS_INTEGRATION_GUIDE.md)
 
 ### External References
 - [Trial vs Freemium: Which Converts Better?](https://www.profitwell.com/recur/all/freemium-vs-free-trial)

@@ -49,6 +49,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
           AND (t.type = COALESCE(:type, t.type))
           AND (t.date >= COALESCE(:fromDate, t.date))
           AND (t.date <= COALESCE(:toDate, t.date))
+        ORDER BY t.date DESC
         """
     )
     Page<Transaction> findByUserIdWithFilters(
