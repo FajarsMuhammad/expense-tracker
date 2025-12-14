@@ -1,6 +1,7 @@
 package com.fajars.expensetracker.common.exception;
 
 import com.fajars.expensetracker.common.i18n.MessageHelper;
+import com.fajars.expensetracker.common.logging.CorrelationContext;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,9 @@ import java.util.Map;
  * <p>Supports i18n via Accept-Language header (id, en).
  * All error messages are localized based on user's locale preference.
  *
+ * <p><b>Java 25 Migration:</b> Uses {@link CorrelationContext} (ScopedValue-based)
+ * for correlation ID retrieval with MDC fallback for backward compatibility.
+ *
  * @since Milestone 7
  */
 @RestControllerAdvice
@@ -37,6 +41,23 @@ public class GlobalExceptionHandler {
     private static final String CORRELATION_ID_KEY = "correlationId";
 
     private final MessageHelper messageHelper;
+
+    /**
+     * Get the current correlation ID using Java 25 ScopedValue.
+     * Falls back to MDC if not found in ScopedValue (for backward compatibility).
+     *
+     * @return the correlation ID, or null if not available
+     */
+    private String getCorrelationId() {
+        // Primary: Java 25 ScopedValue (more efficient)
+        String correlationId = CorrelationContext.get();
+        if (correlationId != null) {
+            return correlationId;
+        }
+
+        // Fallback: SLF4J MDC (for backward compatibility)
+        return MDC.get(CORRELATION_ID_KEY);
+    }
 
     /**
      * Handle validation errors (Bean Validation)
@@ -67,7 +88,7 @@ public class GlobalExceptionHandler {
                 .error(messageHelper.getMessage("validation.failed"))
                 .message(messageHelper.getMessage("validation.failed"))
                 .path(request.getRequestURI())
-                .correlationId(MDC.get(CORRELATION_ID_KEY))
+                .correlationId(getCorrelationId())
                 .validationErrors(validationErrors)
                 .build();
 
@@ -94,7 +115,7 @@ public class GlobalExceptionHandler {
                 .error(messageHelper.getMessage("common.invalid_request"))
                 .message(message)
                 .path(request.getRequestURI())
-                .correlationId(MDC.get(CORRELATION_ID_KEY))
+                .correlationId(getCorrelationId())
                 .build();
 
         return ResponseEntity.badRequest().body(errorResponse);
@@ -116,7 +137,7 @@ public class GlobalExceptionHandler {
                 .error(messageHelper.getMessage("common.unauthorized"))
                 .message(messageHelper.getMessage("auth.login.invalid_credentials"))
                 .path(request.getRequestURI())
-                .correlationId(MDC.get(CORRELATION_ID_KEY))
+                .correlationId(getCorrelationId())
                 .build();
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
@@ -138,7 +159,7 @@ public class GlobalExceptionHandler {
                 .error(messageHelper.getMessage("common.unauthorized"))
                 .message(messageHelper.getMessage("common.unauthorized"))
                 .path(request.getRequestURI())
-                .correlationId(MDC.get(CORRELATION_ID_KEY))
+                .correlationId(getCorrelationId())
                 .build();
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
@@ -160,7 +181,7 @@ public class GlobalExceptionHandler {
                 .error(messageHelper.getMessage("common.forbidden"))
                 .message(messageHelper.getMessage("common.forbidden"))
                 .path(request.getRequestURI())
-                .correlationId(MDC.get(CORRELATION_ID_KEY))
+                .correlationId(getCorrelationId())
                 .build();
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
@@ -182,7 +203,7 @@ public class GlobalExceptionHandler {
                 .error(messageHelper.getMessage("common.invalid_request"))
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
-                .correlationId(MDC.get(CORRELATION_ID_KEY))
+                .correlationId(getCorrelationId())
                 .build();
 
         return ResponseEntity.badRequest().body(errorResponse);
@@ -204,7 +225,7 @@ public class GlobalExceptionHandler {
                 .error(messageHelper.getMessage("common.not_found"))
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
-                .correlationId(MDC.get(CORRELATION_ID_KEY))
+                .correlationId(getCorrelationId())
                 .build();
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
@@ -226,7 +247,7 @@ public class GlobalExceptionHandler {
                 .error(ex.getStatus().getReasonPhrase())
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
-                .correlationId(MDC.get(CORRELATION_ID_KEY))
+                .correlationId(getCorrelationId())
                 .details(ex.getDetails())
                 .build();
 
@@ -249,7 +270,7 @@ public class GlobalExceptionHandler {
                 .error(messageHelper.getMessage("system.service_unavailable"))
                 .message(messageHelper.getMessage("system.service_unavailable"))
                 .path(request.getRequestURI())
-                .correlationId(MDC.get(CORRELATION_ID_KEY))
+                .correlationId(getCorrelationId())
                 .build();
 
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
@@ -271,7 +292,7 @@ public class GlobalExceptionHandler {
                 .error(messageHelper.getMessage("system.rate_limit_exceeded"))
                 .message(messageHelper.getMessage("system.rate_limit_exceeded"))
                 .path(request.getRequestURI())
-                .correlationId(MDC.get(CORRELATION_ID_KEY))
+                .correlationId(getCorrelationId())
                 .build();
 
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorResponse);
@@ -299,7 +320,7 @@ public class GlobalExceptionHandler {
                 .error(messageHelper.getMessage("common.internal_error"))
                 .message(messageHelper.getMessage("common.internal_error"))
                 .path(request.getRequestURI())
-                .correlationId(MDC.get(CORRELATION_ID_KEY))
+                .correlationId(getCorrelationId())
                 .build();
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);

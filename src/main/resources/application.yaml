@@ -1,6 +1,9 @@
 spring:
   application:
     name: expense-tracker
+  threads:
+    virtual:
+      enabled: true  # Enable Java 25 virtual threads for better performance and scalability
   datasource:
     url: jdbc:postgresql://localhost:5432/expense_tracker?timezone=Asia/Jakarta
     username:
