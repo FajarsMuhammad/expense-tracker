@@ -216,4 +216,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
         @Param("endDate") LocalDateTime endDate,
         @Param("walletIds") List<UUID> walletIds
     );
+
+    List<Transaction> findTopNByUserIdAndDateBeforeOrderByDateDesc(
+    UUID userId,
+    LocalDateTime lastDate,
+    Pageable pageable
+);
 }

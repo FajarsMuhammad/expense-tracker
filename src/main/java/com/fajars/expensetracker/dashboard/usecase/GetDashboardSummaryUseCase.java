@@ -75,8 +75,7 @@ public class GetDashboardSummaryUseCase implements GetDashboardSummary {
             recentTransactions = recentTransactions.subList(0, 5);
         }
 
-        List<TransactionSummaryResponse> recentTransactionDtos = recentTransactions.stream()
-            .limit(5)
+        List<TransactionSummaryResponse> recentTransactionDtos = recentTransactions.stream().limit(5)
             .map(TransactionSummaryResponse::from).toList();
 
         DashboardSummaryResponse result = new DashboardSummaryResponse(walletBalance, todayIncome,
