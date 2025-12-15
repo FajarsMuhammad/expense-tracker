@@ -2,25 +2,31 @@ package com.fajars.expensetracker.report.usecase;
 
 import com.fajars.expensetracker.common.logging.BusinessEventLogger;
 import com.fajars.expensetracker.common.metrics.MetricsService;
-import com.fajars.expensetracker.report.*;
+import com.fajars.expensetracker.report.ExportFilter;
+import com.fajars.expensetracker.report.ExportFormat;
+import com.fajars.expensetracker.report.ExportRequest;
+import com.fajars.expensetracker.report.ExportResponse;
+import com.fajars.expensetracker.report.ReportFilter;
 import com.fajars.expensetracker.report.export.CsvExporter;
 import com.fajars.expensetracker.report.export.ExcelExporter;
 import com.fajars.expensetracker.report.export.PdfExporter;
 import com.fajars.expensetracker.subscription.SubscriptionHelper;
 import com.fajars.expensetracker.transaction.Transaction;
 import com.fajars.expensetracker.transaction.TransactionRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Use case for exporting transactions in various formats.
@@ -156,30 +162,42 @@ public class ExportTransactionsUseCase implements ExportTransactions {
 
     /**
      * Fetch transactions based on filter criteria.
+     *
+     * <p>For exports, we fetch ALL matching transactions up to the export limit,
+     * not just a single page. This ensures complete data export.
      */
     private List<Transaction> fetchTransactions(UUID userId, ReportFilter filter) {
         int exportLimit = subscriptionHelper.getExportLimit(userId);
 
-        // Apply export limit to page size
-        int maxSize = Math.min(filter.size(), exportLimit);
+        List<Transaction> result = new ArrayList<>(Math.min(exportLimit, 1024));
 
-        Pageable pageable = PageRequest.of(
-            filter.page(),
-            maxSize,
-            Sort.by(Sort.Direction.DESC, "date")
-        );
+        LocalDateTime lastDate = LocalDateTime.now();
+        int batchSize = 1000;
 
-        Page<Transaction> page = transactionRepository.findByUserIdWithFilters(
-            userId,
-            filter.hasWalletFilter() && !filter.walletIds().isEmpty() ? filter.walletIds().getFirst() : null,
-            filter.hasCategoryFilter() && !filter.categoryIds().isEmpty() ? filter.categoryIds().getFirst() : null,
-            filter.hasTypeFilter() ? com.fajars.expensetracker.transaction.TransactionType.valueOf(filter.type()) : null,
-            filter.startDate(),
-            filter.endDate(),
-            pageable
-        );
+        while (result.size() < exportLimit) {
+            Pageable pageable = PageRequest.of(0, batchSize);
 
-        return page.getContent();
+            List<Transaction> batch =
+                transactionRepository.findTopNByUserIdAndDateBeforeOrderByDateDesc(
+                    userId,
+                    lastDate,
+                    pageable
+                );
+
+            if (batch.isEmpty()) {
+                break;
+            }
+
+            result.addAll(batch);
+
+            if (result.size() >= exportLimit) {
+                return result.subList(0, exportLimit);
+            }
+
+            lastDate = batch.get(batch.size() - 1).getDate();
+        }
+
+        return result;
     }
 
     /**
