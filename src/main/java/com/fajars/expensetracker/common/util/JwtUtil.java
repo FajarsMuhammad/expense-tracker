@@ -2,7 +2,6 @@ package com.fajars.expensetracker.common.util;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -37,10 +36,10 @@ public class JwtUtil {
 
     public String generateToken(String username) {
         return Jwts.builder()
-                .setSubject(username)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .signWith(key, SignatureAlgorithm.HS256)
+                .subject(username)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .signWith(key)
                 .compact();
     }
 
@@ -60,11 +59,11 @@ public class JwtUtil {
 
     private Claims getClaims(String token) {
         try {
-            return Jwts.parserBuilder()
-                    .setSigningKey(key)
+            return Jwts.parser()
+                    .verifyWith(key)
                     .build()
-                    .parseClaimsJws(token)
-                    .getBody();
+                    .parseSignedClaims(token)
+                    .getPayload();
         } catch (JwtException | IllegalArgumentException ex) {
             return null;
         }

@@ -45,7 +45,8 @@
       "Bash(xargs:*)",
       "Bash(./gradlew bootJar:*)",
       "Bash(ls:*)",
-      "Bash(./gradlew compileTestJava:*)"
+      "Bash(./gradlew compileTestJava:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

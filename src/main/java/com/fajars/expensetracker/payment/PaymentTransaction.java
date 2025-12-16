@@ -1,12 +1,11 @@
 package com.fajars.expensetracker.payment;
 
+import com.fajars.expensetracker.common.converter.JsonbConverter;
 import com.fajars.expensetracker.subscription.Subscription;
 import com.fajars.expensetracker.user.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -120,7 +119,7 @@ public class PaymentTransaction {
      * Full webhook payload from payment gateway for audit trail.
      * Stored as JSONB for queryability.
      */
-    @JdbcTypeCode(SqlTypes.JSON)
+    @Convert(converter = JsonbConverter.class)
     @Column(name = "webhook_payload", columnDefinition = "jsonb")
     private Map<String, Object> webhookPayload;
 
@@ -135,7 +134,7 @@ public class PaymentTransaction {
      * Additional metadata (device info, IP, campaign tracking, etc.).
      * Stored as JSONB for flexibility.
      */
-    @JdbcTypeCode(SqlTypes.JSON)
+    @Convert(converter = JsonbConverter.class)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> metadata;
 

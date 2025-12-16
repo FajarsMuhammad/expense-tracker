@@ -11,8 +11,8 @@ import com.fajars.expensetracker.report.export.CsvExporter;
 import com.fajars.expensetracker.report.export.ExcelExporter;
 import com.fajars.expensetracker.report.export.PdfExporter;
 import com.fajars.expensetracker.subscription.SubscriptionHelper;
-import com.fajars.expensetracker.transaction.Transaction;
-import com.fajars.expensetracker.transaction.TransactionRepository;
+import com.fajars.expensetracker.transaction.TransactionExportRepository;
+import com.fajars.expensetracker.transaction.projection.TransactionExportRow;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -25,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,8 +33,9 @@ import org.springframework.transaction.annotation.Transactional;
  * Use case for exporting transactions in various formats.
  *
  * <p><b>PREMIUM Feature:</b> Export is now premium-only.
- * Access control is enforced at controller level via AOP {@link com.fajars.expensetracker.common.security.RequiresPremium}.
- * All users reaching this use case are guaranteed to be PREMIUM or TRIAL tier.
+ * Access control is enforced at controller level via AOP
+ * {@link com.fajars.expensetracker.common.security.RequiresPremium}. All users reaching this use
+ * case are guaranteed to be PREMIUM or TRIAL tier.
  *
  * <p>Features:
  * <ul>
@@ -55,7 +57,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class ExportTransactionsUseCase implements ExportTransactions {
 
-    private final TransactionRepository transactionRepository;
+    private final TransactionExportRepository exportRepository;
     private final CsvExporter csvExporter;
     private final ExcelExporter excelExporter;
     private final PdfExporter pdfExporter;
@@ -69,18 +71,13 @@ public class ExportTransactionsUseCase implements ExportTransactions {
         long startTime = System.currentTimeMillis();
         log.info("Exporting transactions for user {} in format {}", userId, request.format());
 
-        // 1. Validate export quota
-        // Note: All users are PREMIUM (enforced by AOP), so this always returns 10,000 record limit
         validateExportQuota(userId, request);
 
-        // 2. Convert ExportFilter to ReportFilter and fetch transactions
-        ReportFilter reportFilter = convertToReportFilter(userId, request.filter());
-        List<Transaction> transactions = fetchTransactions(userId, reportFilter);
+        ReportFilter filter = convertToReportFilter(userId, request.filter());
 
-        // 3. Generate file based on format
+        List<TransactionExportRow> transactions = fetchTransactions(userId, filter);
         byte[] fileContent = generateFile(transactions, request.format());
 
-        // 4. Build response
         String fileName = generateFileName(request.format());
         String contentType = getContentType(request.format());
         String base64Content = Base64.getEncoder().encodeToString(fileContent);
@@ -94,7 +91,6 @@ public class ExportTransactionsUseCase implements ExportTransactions {
             LocalDateTime.now().plusHours(1)  // expires in 1 hour
         );
 
-        // 5. Record metrics and log
         long duration = System.currentTimeMillis() - startTime;
         metricsService.incrementCounter("export.transactions.total");
         metricsService.recordTimer("export.transactions.duration", startTime);
@@ -104,9 +100,11 @@ public class ExportTransactionsUseCase implements ExportTransactions {
         attributes.put("format", request.format());
         attributes.put("recordCount", transactions.size());
         attributes.put("duration", duration);
-        businessEventLogger.logBusinessEvent("TRANSACTIONS_EXPORTED", userId.toString(), attributes);
+        businessEventLogger.logBusinessEvent("TRANSACTIONS_EXPORTED", userId.toString(),
+                                             attributes);
 
-        log.info("Exported {} transactions for user {} in {}ms", transactions.size(), userId, duration);
+        log.info("Exported {} transactions for user {} in {}ms", transactions.size(), userId,
+                 duration);
 
         return response;
     }
@@ -149,8 +147,9 @@ public class ExportTransactionsUseCase implements ExportTransactions {
     /**
      * Validate export quota for premium users.
      *
-     * <p>Note: Since export is premium-only (enforced by AOP), this always returns 10,000 records limit.
-     * This method exists for potential future tier differentiation (e.g., PREMIUM vs ENTERPRISE tiers).
+     * <p>Note: Since export is premium-only (enforced by AOP), this always returns 10,000 records
+     * limit. This method exists for potential future tier differentiation (e.g., PREMIUM vs
+     * ENTERPRISE tiers).
      */
     private void validateExportQuota(UUID userId, ExportRequest request) {
         int exportLimit = subscriptionHelper.getExportLimit(userId);
@@ -166,44 +165,51 @@ public class ExportTransactionsUseCase implements ExportTransactions {
      * <p>For exports, we fetch ALL matching transactions up to the export limit,
      * not just a single page. This ensures complete data export.
      */
-    private List<Transaction> fetchTransactions(UUID userId, ReportFilter filter) {
+    private List<TransactionExportRow> fetchTransactions(UUID userId, ReportFilter filter) {
         int exportLimit = subscriptionHelper.getExportLimit(userId);
+        int pageSize = Math.min(filter.size(), exportLimit);
 
-        List<Transaction> result = new ArrayList<>(Math.min(exportLimit, 1024));
+        int page = 0;
+        int totalFetched = 0;
 
-        LocalDateTime lastDate = LocalDateTime.now();
-        int batchSize = 1000;
+        List<TransactionExportRow> all = new ArrayList<>();
 
-        while (result.size() < exportLimit) {
-            Pageable pageable = PageRequest.of(0, batchSize);
+        List<TransactionExportRow> batch;
 
-            List<Transaction> batch =
-                transactionRepository.findTopNByUserIdAndDateBeforeOrderByDateDesc(
-                    userId,
-                    lastDate,
-                    pageable
-                );
+        do {
+            Pageable pageable = PageRequest.of(
+                page,
+                pageSize,
+                Sort.by(Sort.Direction.DESC, "date")
+            );
 
-            if (batch.isEmpty()) {
-                break;
+            batch = exportRepository.exportTransactions(
+                userId,
+                filter.firstWalletId(),
+                filter.firstCategoryId(),
+                filter.transactionType(),
+                filter.startDate(),
+                filter.endDate(),
+                pageable
+            );
+
+            if (!batch.isEmpty()) {
+                all.addAll(batch);
+                totalFetched += batch.size();
             }
 
-            result.addAll(batch);
+            page++;
 
-            if (result.size() >= exportLimit) {
-                return result.subList(0, exportLimit);
-            }
+        } while (!batch.isEmpty() && totalFetched < exportLimit);
 
-            lastDate = batch.get(batch.size() - 1).getDate();
-        }
+        return all;
 
-        return result;
     }
 
     /**
      * Generate file content based on format.
      */
-    private byte[] generateFile(List<Transaction> transactions, ExportFormat format) {
+    private byte[] generateFile(List<TransactionExportRow> transactions, ExportFormat format) {
         return switch (format) {
             case CSV -> csvExporter.exportTransactionsToCsv(transactions);
             case EXCEL -> excelExporter.exportTransactionsToExcel(transactions);

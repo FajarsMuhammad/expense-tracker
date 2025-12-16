@@ -1,13 +1,14 @@
 package com.fajars.expensetracker.report;
 
+import com.fajars.expensetracker.transaction.TransactionType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * Filter criteria for generating reports.
- * Supports filtering by date range, wallets, categories, and transaction type.
+ * Filter criteria for generating reports. Supports filtering by date range, wallets, categories,
+ * and transaction type.
  */
 @Schema(description = "Filter criteria for report generation")
 public record ReportFilter(
@@ -74,5 +75,21 @@ public record ReportFilter(
      */
     public boolean hasTypeFilter() {
         return type != null && !type.isBlank();
+    }
+
+    public UUID firstWalletId() {
+        return hasWalletFilter() && !walletIds().isEmpty()
+            ? walletIds().getFirst()
+            : null;
+    }
+
+    public UUID firstCategoryId() {
+        return hasCategoryFilter() && !categoryIds().isEmpty()
+            ? categoryIds().getFirst()
+            : null;
+    }
+
+    public TransactionType transactionType() {
+        return hasTypeFilter() ? TransactionType.valueOf(type) : null;
     }
 }
