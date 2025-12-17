@@ -46,7 +46,12 @@
       "Bash(./gradlew bootJar:*)",
       "Bash(ls:*)",
       "Bash(./gradlew compileTestJava:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(podman machine stop:*)",
+      "Bash(podman machine set:*)",
+      "Bash(podman machine start:*)",
+      "Bash(podman info:*)",
+      "Bash(podman stats:*)"
     ],
     "deny": [],
     "ask": []

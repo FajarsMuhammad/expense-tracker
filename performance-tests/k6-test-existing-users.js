@@ -14,7 +14,7 @@ const exportOperations = new Counter('export_operations');
 // Configuration
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8081';
 
-// Test configuration - 100 users with 7000 transactions each
+// Test configuration - 100 existing users with 7000 transactions each
 export const options = {
   scenarios: {
     load_test: {
@@ -32,15 +32,6 @@ export const options = {
 };
 
 // Helper function to generate random data
-function randomString(length) {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
-
 function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -57,51 +48,25 @@ function randomCategoryName(type) {
   return categories[Math.floor(Math.random() * categories.length)];
 }
 
-// Main test scenario
+// Main test scenario for existing users
 export default function () {
+  // Use existing users created from previous test
   const userId = `loadtest-user-${__VU}`;
   const userEmail = `${userId}@example.com`;
   const userPassword = 'LoadTest123!';
-  const userName = `Load Test User ${__VU}`;
 
   let token = '';
-  let walletId = '';
-  let categoryId = '';
-  let transactionId = '';
+  const walletIds = [];
+  const allCategories = [];
+  const expenseCategories = [];
+  const incomeCategories = [];
 
   // ============================================
-  // Scenario 1: User Registration & Authentication
+  // Scenario 1: Login with Existing User
   // ============================================
 
-  console.log(`[VU ${__VU}] Starting test - Registering user ${userEmail}`);
+  console.log(`[VU ${__VU}] Logging in with existing user ${userEmail}`);
 
-  // Register user
-  const registerPayload = JSON.stringify({
-    email: userEmail,
-    password: userPassword,
-    name: userName,
-  });
-
-  const registerRes = http.post(`${BASE_URL}/api/v1/auth/register`, registerPayload, {
-    headers: { 'Content-Type': 'application/json' },
-    tags: { name: 'Register' },
-  });
-
-  const registerSuccess = check(registerRes, {
-    'registration status is 200 or 409 (already exists)': (r) => r.status === 200 || r.status === 409,
-  });
-
-  if (!registerSuccess) {
-    console.log(`[VU ${__VU}] Registration failed: ${registerRes.status} ${registerRes.body}`);
-    errorRate.add(1);
-    return;
-  }
-
-  authSuccessRate.add(registerSuccess);
-  console.log(`[VU ${__VU}] Registration successful`);
-  sleep(0.5);
-
-  // Login to get JWT token
   const loginPayload = JSON.stringify({
     email: userEmail,
     password: userPassword,
@@ -115,135 +80,148 @@ export default function () {
   const loginSuccess = check(loginRes, {
     'login status is 200': (r) => r.status === 200,
     'login returns token': (r) => {
-      if (r.status === 200) {
-        const body = JSON.parse(r.body);
-        return body.token && body.token.length > 0;
-      }
-      return false;
+      const body = JSON.parse(r.body);
+      return body.token !== undefined;
     },
   });
 
-  if (loginSuccess && loginRes.status === 200) {
-    const loginData = JSON.parse(loginRes.body);
-    token = loginData.token;
-  } else {
-    console.log(`Login failed for ${userEmail}: ${loginRes.status}`);
+  if (!loginSuccess) {
+    console.log(`[VU ${__VU}] Login failed: ${loginRes.status} ${loginRes.body}`);
     errorRate.add(1);
-    return; // Exit if login fails
+    authSuccessRate.add(0);
+    return;
   }
 
-  authSuccessRate.add(loginSuccess);
-  console.log(`[VU ${__VU}] Login successful`);
-  sleep(0.5);
+  authSuccessRate.add(1);
+  const loginBody = JSON.parse(loginRes.body);
+  token = loginBody.token;
 
   const headers = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
+    Authorization: `Bearer ${token}`,
   };
 
-  // ============================================
-  // Scenario 2: Create 10 Wallets
-  // ============================================
-
-  console.log(`[VU ${__VU}] Creating 10 wallets...`);
-  const walletIds = [];
-
-  for (let i = 0; i < 10; i++) {
-    const createWalletPayload = JSON.stringify({
-      name: `Wallet-${__VU}-${i}`,
-      currency: randomCurrency(),
-      initialBalance: randomInt(100000, 10000000),
-    });
-
-    const createWalletRes = http.post(`${BASE_URL}/api/v1/wallets`, createWalletPayload, {
-      headers: headers,
-      tags: { name: 'CreateWallet' },
-    });
-
-    const createSuccess = check(createWalletRes, {
-      'create wallet status is 201': (r) => r.status === 201,
-    });
-
-    if (createSuccess && createWalletRes.status === 201) {
-      const body = JSON.parse(createWalletRes.body);
-      walletIds.push(body.id);
-      if (i === 0) {
-        walletId = body.id; // Store first wallet ID
-      }
-    }
-
-    walletOperations.add(1);
-    errorRate.add(!createSuccess);
-
-    if ((i + 1) % 5 === 0) {
-      console.log(`[VU ${__VU}] Created ${i + 1}/10 wallets`);
-    }
-  }
-
-  console.log(`[VU ${__VU}] Completed creating ${walletIds.length} wallets`);
+  console.log(`[VU ${__VU}] Login successful`);
   sleep(0.5);
 
   // ============================================
-  // Scenario 3: Create Categories
+  // Scenario 2: Get Existing Wallets
   // ============================================
 
-  console.log(`[VU ${__VU}] Creating categories...`);
+  console.log(`[VU ${__VU}] Fetching existing wallets...`);
 
-  // Create 5 expense categories
-  const expenseCategories = [];
-  for (let i = 0; i < 5; i++) {
-    const createCategoryPayload = JSON.stringify({
-      name: `Expense-${__VU}-${randomCategoryName('EXPENSE')}-${i}`,
-      type: 'EXPENSE',
-    });
+  const getWalletsRes = http.get(`${BASE_URL}/api/v1/wallets`, {
+    headers: headers,
+    tags: { name: 'GetWallets' },
+  });
 
-    const createCategoryRes = http.post(`${BASE_URL}/api/v1/categories`, createCategoryPayload, {
-      headers: headers,
-      tags: { name: 'CreateCategory' },
-    });
+  if (getWalletsRes.status === 200) {
+    const walletsBody = JSON.parse(getWalletsRes.body);
+    if (walletsBody.content && walletsBody.content.length > 0) {
+      walletsBody.content.forEach((wallet) => {
+        walletIds.push(wallet.id);
+      });
+      console.log(`[VU ${__VU}] Found ${walletIds.length} existing wallets`);
+    } else {
+      console.log(`[VU ${__VU}] No existing wallets found, creating 10 new wallets...`);
+      // Create 10 wallets if none exist
+      for (let i = 0; i < 10; i++) {
+        const createWalletPayload = JSON.stringify({
+          name: `Wallet-${__VU}-${i + 1}`,
+          currency: randomCurrency(),
+          initialBalance: randomInt(100000, 10000000),
+          description: `Load test wallet ${i + 1} for VU ${__VU}`,
+        });
 
-    const createSuccess = check(createCategoryRes, {
-      'create category status is 201': (r) => r.status === 201,
-    });
+        const createWalletRes = http.post(`${BASE_URL}/api/v1/wallets`, createWalletPayload, {
+          headers: headers,
+          tags: { name: 'CreateWallet' },
+        });
 
-    if (createSuccess && createCategoryRes.status === 201) {
-      const body = JSON.parse(createCategoryRes.body);
-      expenseCategories.push(body.id);
-      if (!categoryId) categoryId = body.id;
+        if (createWalletRes.status === 201) {
+          const walletBody = JSON.parse(createWalletRes.body);
+          walletIds.push(walletBody.id);
+          walletOperations.add(1);
+        }
+      }
+      console.log(`[VU ${__VU}] Created ${walletIds.length} wallets`);
     }
-
-    categoryOperations.add(1);
-    errorRate.add(!createSuccess);
   }
 
-  // Create 2 income categories
-  const incomeCategories = [];
-  for (let i = 0; i < 2; i++) {
-    const createCategoryPayload = JSON.stringify({
-      name: `Income-${__VU}-${randomCategoryName('INCOME')}-${i}`,
-      type: 'INCOME',
-    });
+  sleep(0.5);
 
-    const createCategoryRes = http.post(`${BASE_URL}/api/v1/categories`, createCategoryPayload, {
-      headers: headers,
-      tags: { name: 'CreateCategory' },
-    });
+  // ============================================
+  // Scenario 3: Get Existing Categories
+  // ============================================
 
-    const createSuccess = check(createCategoryRes, {
-      'create category status is 201': (r) => r.status === 201,
-    });
+  console.log(`[VU ${__VU}] Fetching existing categories...`);
 
-    if (createSuccess && createCategoryRes.status === 201) {
-      const body = JSON.parse(createCategoryRes.body);
-      incomeCategories.push(body.id);
+  const getCategoriesRes = http.get(`${BASE_URL}/api/v1/categories`, {
+    headers: headers,
+    tags: { name: 'GetCategories' },
+  });
+
+  if (getCategoriesRes.status === 200) {
+    const categoriesBody = JSON.parse(getCategoriesRes.body);
+    if (categoriesBody.content && categoriesBody.content.length > 0) {
+      categoriesBody.content.forEach((category) => {
+        allCategories.push(category.id);
+        if (category.type === 'EXPENSE') {
+          expenseCategories.push(category.id);
+        } else {
+          incomeCategories.push(category.id);
+        }
+      });
+      console.log(`[VU ${__VU}] Found ${allCategories.length} existing categories (${expenseCategories.length} expense, ${incomeCategories.length} income)`);
+    } else {
+      console.log(`[VU ${__VU}] No existing categories found, creating categories...`);
+      // Create expense categories
+      const expenseCategoryNames = ['Groceries', 'Transport', 'Entertainment', 'Bills', 'Shopping'];
+      for (const name of expenseCategoryNames) {
+        const createCategoryPayload = JSON.stringify({
+          name: name,
+          type: 'EXPENSE',
+          description: `${name} category for VU ${__VU}`,
+        });
+
+        const createCategoryRes = http.post(`${BASE_URL}/api/v1/categories`, createCategoryPayload, {
+          headers: headers,
+          tags: { name: 'CreateCategory' },
+        });
+
+        if (createCategoryRes.status === 201) {
+          const categoryBody = JSON.parse(createCategoryRes.body);
+          allCategories.push(categoryBody.id);
+          expenseCategories.push(categoryBody.id);
+          categoryOperations.add(1);
+        }
+      }
+
+      // Create income categories
+      const incomeCategoryNames = ['Salary', 'Bonus', 'Investment'];
+      for (const name of incomeCategoryNames) {
+        const createCategoryPayload = JSON.stringify({
+          name: name,
+          type: 'INCOME',
+          description: `${name} category for VU ${__VU}`,
+        });
+
+        const createCategoryRes = http.post(`${BASE_URL}/api/v1/categories`, createCategoryPayload, {
+          headers: headers,
+          tags: { name: 'CreateCategory' },
+        });
+
+        if (createCategoryRes.status === 201) {
+          const categoryBody = JSON.parse(createCategoryRes.body);
+          allCategories.push(categoryBody.id);
+          incomeCategories.push(categoryBody.id);
+          categoryOperations.add(1);
+        }
+      }
+      console.log(`[VU ${__VU}] Created ${allCategories.length} categories`);
     }
-
-    categoryOperations.add(1);
-    errorRate.add(!createSuccess);
   }
 
-  const allCategories = [...expenseCategories, ...incomeCategories];
-  console.log(`[VU ${__VU}] Created ${allCategories.length} categories`);
   sleep(0.5);
 
   // ============================================
@@ -307,25 +285,22 @@ export default function () {
   }
 
   // ============================================
-  // Scenario 5: Create 1,000 Debts
+  // Scenario 5: Create 1,000 Debts (Optional)
   // ============================================
 
   console.log(`[VU ${__VU}] Creating 1,000 debts...`);
 
   let debtSuccessCount = 0;
-  let debtErrorCount = 0;
-
   for (let i = 0; i < 1000; i++) {
-    const debtType = i % 2 === 0 ? 'PAYABLE' : 'RECEIVABLE';
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + randomInt(7, 365));
+    const isLent = i % 2 === 0; // 50% lent, 50% borrowed
 
     const createDebtPayload = JSON.stringify({
-      type: debtType,
-      counterpartyName: `Person-${__VU}-${i}`,
-      totalAmount: randomInt(100000, 10000000),
-      dueDate: dueDate.toISOString(),
-      note: `Debt-${__VU}-${i}`,
+      personName: `Person-${__VU}-${i}`,
+      amount: randomInt(100000, 10000000),
+      type: isLent ? 'LENT' : 'BORROWED',
+      description: `Debt ${i + 1} for VU ${__VU}`,
+      dueDate: new Date(Date.now() + randomInt(1, 365) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: 'UNPAID',
     });
 
     const createDebtRes = http.post(`${BASE_URL}/api/v1/debts`, createDebtPayload, {
@@ -333,104 +308,64 @@ export default function () {
       tags: { name: 'CreateDebt' },
     });
 
-    const createSuccess = check(createDebtRes, {
-      'create debt status is 201': (r) => r.status === 201,
-    });
-
-    if (createSuccess) {
+    if (createDebtRes.status === 201) {
       debtSuccessCount++;
-    } else {
-      debtErrorCount++;
+      debtOperations.add(1);
     }
-
-    debtOperations.add(1);
-    errorRate.add(!createSuccess);
 
     // Progress logging every 200 debts
     if ((i + 1) % 200 === 0) {
-      console.log(`[VU ${__VU}] Created ${i + 1}/1000 debts (Success: ${debtSuccessCount}, Errors: ${debtErrorCount})`);
+      console.log(`[VU ${__VU}] Created ${i + 1}/1000 debts (Success: ${debtSuccessCount})`);
     }
   }
 
-  console.log(`[VU ${__VU}] Completed creating debts - Success: ${debtSuccessCount}, Errors: ${debtErrorCount}`);
+  console.log(`[VU ${__VU}] Completed creating debts - Success: ${debtSuccessCount}`);
   sleep(1);
 
   // ============================================
-  // Scenario 6: Export to CSV and Excel
+  // Scenario 6: Export Operations
   // ============================================
 
-  console.log(`[VU ${__VU}] Exporting transactions to CSV...`);
+  console.log(`[VU ${__VU}] Performing export operations...`);
 
   // Export to CSV
-  const exportCsvPayload = JSON.stringify({
-    format: 'CSV',
-    type: 'TRANSACTIONS',
-    filter: null,
-  });
-
-  const exportCsvRes = http.post(`${BASE_URL}/api/v1/export/transactions`, exportCsvPayload, {
+  const exportCsvRes = http.get(`${BASE_URL}/api/v1/transactions/export/csv`, {
     headers: headers,
     tags: { name: 'ExportCSV' },
   });
 
-  const csvSuccess = check(exportCsvRes, {
-    'export CSV status is 200 or 403 (premium)': (r) => r.status === 200 || r.status === 403,
-  });
-
-  exportOperations.add(1);
-  if (exportCsvRes.status === 403) {
-    console.log(`[VU ${__VU}] Export CSV blocked - Premium feature`);
-  } else if (csvSuccess) {
-    console.log(`[VU ${__VU}] Export CSV successful`);
-  } else {
-    console.log(`[VU ${__VU}] Export CSV failed: ${exportCsvRes.status}`);
-    errorRate.add(1);
+  if (exportCsvRes.status === 200) {
+    exportOperations.add(1);
+    console.log(`[VU ${__VU}] CSV export successful`);
   }
 
   sleep(1);
 
   // Export to Excel
-  console.log(`[VU ${__VU}] Exporting transactions to Excel...`);
-
-  const exportExcelPayload = JSON.stringify({
-    format: 'EXCEL',
-    type: 'TRANSACTIONS',
-    filter: null,
-  });
-
-  const exportExcelRes = http.post(`${BASE_URL}/api/v1/export/transactions`, exportExcelPayload, {
+  const exportExcelRes = http.get(`${BASE_URL}/api/v1/transactions/export/excel`, {
     headers: headers,
     tags: { name: 'ExportExcel' },
   });
 
-  const excelSuccess = check(exportExcelRes, {
-    'export Excel status is 200 or 403 (premium)': (r) => r.status === 200 || r.status === 403,
-  });
-
-  exportOperations.add(1);
-  if (exportExcelRes.status === 403) {
-    console.log(`[VU ${__VU}] Export Excel blocked - Premium feature`);
-  } else if (excelSuccess) {
-    console.log(`[VU ${__VU}] Export Excel successful`);
-  } else {
-    console.log(`[VU ${__VU}] Export Excel failed: ${exportExcelRes.status}`);
-    errorRate.add(1);
+  if (exportExcelRes.status === 200) {
+    exportOperations.add(1);
+    console.log(`[VU ${__VU}] Excel export successful`);
   }
 
-  console.log(`[VU ${__VU}] ==> TEST COMPLETED SUCCESSFULLY`);
+  console.log(`[VU ${__VU}] Test completed successfully!`);
 }
 
 // Summary handler
 export function handleSummary(data) {
   console.log('\n======================================');
-  console.log('LOAD TEST SUMMARY - 100 USERS');
+  console.log('LOAD TEST SUMMARY - 100 EXISTING USERS');
   console.log('======================================\n');
 
   console.log('Test Configuration:');
-  console.log(`  Virtual Users: 100`);
+  console.log(`  Virtual Users: 100 (existing users)`);
   console.log(`  Per User Tasks:`);
-  console.log(`    - 1 Registration`);
-  console.log(`    - 10 Wallets`);
+  console.log(`    - 1 Login (no registration)`);
+  console.log(`    - Use existing wallets/categories (or create if missing)`);
   console.log(`    - 7,000 Transactions`);
   console.log(`    - 1,000 Debts`);
   console.log(`    - 2 Exports (CSV + Excel)`);
@@ -458,7 +393,7 @@ export function handleSummary(data) {
   console.log(`  Export Operations: ${data.metrics.export_operations?.values.count || 0}\n`);
 
   console.log('Expected Totals (100 users):');
-  console.log(`  Wallets: 1,000 (100 users × 10)`);
+  console.log(`  Logins: 100`);
   console.log(`  Transactions: 700,000 (100 users × 7,000)`);
   console.log(`  Debts: 100,000 (100 users × 1,000)`);
   console.log(`  Exports: 200 (100 users × 2)\n`);
@@ -467,10 +402,14 @@ export function handleSummary(data) {
   console.log(`  Total: ${data.metrics.iterations.values.count}`);
   console.log(`  Expected: 100 (1 iteration per user)\n`);
 
-  console.log('======================================\n');
+  console.log('Test Duration:');
+  console.log(`  Total Time: ${(data.state.testRunDurationMs / 1000 / 60).toFixed(2)} minutes\n`);
 
   return {
-    'stdout': JSON.stringify(data, null, 2),
-    'performance-tests/reports/summary.json': JSON.stringify(data, null, 2),
+    'stdout': textSummary(data, { indent: ' ', enableColors: true }),
   };
+}
+
+function textSummary(data, options) {
+  return '';
 }

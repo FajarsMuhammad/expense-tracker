@@ -50,11 +50,15 @@ public class CreateTransactionUseCase implements CreateTransaction {
         Transaction transaction = buildTransaction(userId, request, wallet, category);
         transaction = transactionRepository.save(transaction);
 
+        // Build response BEFORE transaction commit to avoid lazy loading issues
+        // Wallet and category are already loaded in this transaction context
+        TransactionResponse response = TransactionResponse.from(transaction);
+
         logBusinessEvent(transaction);
         recordMetrics(startTime);
 
         log.info("Transaction {} created successfully for user {}", transaction.getId(), userId);
-        return TransactionResponse.from(transaction);
+        return response;
     }
 
     private Wallet validateAndGetWallet(UUID userId, UUID walletId) {
