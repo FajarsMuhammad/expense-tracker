@@ -1,13 +1,13 @@
 package com.fajars.expensetracker.dashboard.usecase;
 
 import com.fajars.expensetracker.common.metrics.MetricsService;
-import com.fajars.expensetracker.dashboard.DashboardSummaryResponse;
-import com.fajars.expensetracker.dashboard.WeeklyTrendResponse;
-import com.fajars.expensetracker.transaction.Transaction;
-import com.fajars.expensetracker.transaction.TransactionRepository;
-import com.fajars.expensetracker.transaction.TransactionSummaryResponse;
-import com.fajars.expensetracker.wallet.Wallet;
-import com.fajars.expensetracker.wallet.WalletRepository;
+import com.fajars.expensetracker.dashboard.api.DashboardSummaryResponse;
+import com.fajars.expensetracker.dashboard.api.WeeklyTrendResponse;
+import com.fajars.expensetracker.transaction.domain.Transaction;
+import com.fajars.expensetracker.transaction.domain.TransactionRepository;
+import com.fajars.expensetracker.transaction.api.TransactionSummaryResponse;
+import com.fajars.expensetracker.wallet.domain.Wallet;
+import com.fajars.expensetracker.wallet.domain.WalletRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -110,22 +110,26 @@ public class GetDashboardSummaryUseCase implements GetDashboardSummary {
         } else {
             // Sum all wallets
             List<Wallet> wallets = walletRepository.findByUserId(userId);
-            double totalBalance = 0.0;
-            for (Wallet wallet : wallets) {
-                double balance = wallet.getInitialBalance();
-                if (wallet.getTransactions() != null) {
-                    for (Transaction t : wallet.getTransactions()) {
-                        if ("INCOME".equals(t.getType().name())) {
-                            balance += t.getAmount();
-                        } else if ("EXPENSE".equals(t.getType().name())) {
-                            balance -= t.getAmount();
-                        }
+            return getTotalBalance(wallets);
+        }
+    }
+
+    private double getTotalBalance(List<Wallet> wallets) {
+        double totalBalance = 0.0;
+        for (Wallet wallet : wallets) {
+            double balance = wallet.getInitialBalance();
+            if (wallet.getTransactions() != null) {
+                for (Transaction t : wallet.getTransactions()) {
+                    if ("INCOME".equals(t.getType().name())) {
+                        balance += t.getAmount();
+                    } else if ("EXPENSE".equals(t.getType().name())) {
+                        balance -= t.getAmount();
                     }
                 }
-                totalBalance += balance;
             }
-            return totalBalance;
+            totalBalance += balance;
         }
+        return totalBalance;
     }
 
     private List<WeeklyTrendResponse> calculateWeeklyTrend(UUID userId, UUID walletId) {

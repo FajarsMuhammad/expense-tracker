@@ -1,6 +1,10 @@
 package com.fajars.expensetracker.subscription;
 
-import com.fajars.expensetracker.user.User;
+import com.fajars.expensetracker.subscription.domain.Subscription;
+import com.fajars.expensetracker.subscription.domain.SubscriptionRepository;
+import com.fajars.expensetracker.subscription.domain.SubscriptionStatus;
+import com.fajars.expensetracker.subscription.domain.SubscriptionTier;
+import com.fajars.expensetracker.user.domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

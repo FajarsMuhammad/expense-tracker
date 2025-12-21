@@ -1,15 +1,25 @@
 package com.fajars.expensetracker.report.export;
 
-import com.fajars.expensetracker.transaction.Transaction;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.stereotype.Service;
-
+import com.fajars.expensetracker.transaction.projection.TransactionExportRow;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.BorderStyle;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataFormat;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.VerticalAlignment;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.stereotype.Service;
 
 /**
  * Service for exporting data to Excel format using Apache POI.
@@ -34,7 +44,7 @@ public class ExcelExporter {
      * @param transactions list of transactions to export
      * @return Excel file content as byte array
      */
-    public byte[] exportTransactionsToExcel(List<Transaction> transactions) {
+    public byte[] exportTransactionsToExcel(List<TransactionExportRow> transactions) {
         log.debug("Exporting {} transactions to Excel", transactions.size());
 
         try (XSSFWorkbook workbook = new XSSFWorkbook();
@@ -60,37 +70,37 @@ public class ExcelExporter {
 
             // Create data rows
             int rowNum = 1;
-            for (Transaction t : transactions) {
+            for (TransactionExportRow t : transactions) {
                 Row row = sheet.createRow(rowNum++);
 
                 // Date
                 Cell dateCell = row.createCell(0);
-                dateCell.setCellValue(t.getDate().format(DATE_FORMATTER));
+                dateCell.setCellValue(t.date().format(DATE_FORMATTER));
                 dateCell.setCellStyle(normalStyle);
 
                 // Type
                 Cell typeCell = row.createCell(1);
-                typeCell.setCellValue(formatType(t.getType().name()));
+                typeCell.setCellValue(formatType(t.type().name()));
                 typeCell.setCellStyle(normalStyle);
 
                 // Category
                 Cell categoryCell = row.createCell(2);
-                categoryCell.setCellValue(t.getCategory() != null ? t.getCategory().getName() : "-");
+                categoryCell.setCellValue(t.categoryName() != null ? t.categoryName() : "-");
                 categoryCell.setCellStyle(normalStyle);
 
                 // Wallet
                 Cell walletCell = row.createCell(3);
-                walletCell.setCellValue(t.getWallet() != null ? t.getWallet().getName() : "-");
+                walletCell.setCellValue(t.walletName() != null ? t.walletName() : "-");
                 walletCell.setCellStyle(normalStyle);
 
                 // Amount
                 Cell amountCell = row.createCell(4);
-                amountCell.setCellValue(t.getAmount());
+                amountCell.setCellValue(t.amount());
                 amountCell.setCellStyle(currencyStyle);
 
                 // Note
                 Cell noteCell = row.createCell(5);
-                noteCell.setCellValue(t.getNote() != null ? t.getNote() : "");
+                noteCell.setCellValue(t.note() != null ? t.note() : "");
                 noteCell.setCellStyle(normalStyle);
             }
 
@@ -170,7 +180,7 @@ public class ExcelExporter {
     /**
      * Add summary row with total income and expense.
      */
-    private void addSummaryRow(Sheet sheet, List<Transaction> transactions, int rowNum,
+    private void addSummaryRow(Sheet sheet, List<TransactionExportRow> transactions, int rowNum,
                                CellStyle headerStyle, CellStyle currencyStyle) {
         // Add empty row
         rowNum++;
@@ -184,13 +194,13 @@ public class ExcelExporter {
 
         // Calculate totals
         double totalIncome = transactions.stream()
-            .filter(t -> "INCOME".equals(t.getType().name()))
-            .mapToDouble(Transaction::getAmount)
+            .filter(t -> "INCOME".equals(t.type().name()))
+            .mapToDouble(TransactionExportRow::amount)
             .sum();
 
         double totalExpense = transactions.stream()
-            .filter(t -> "EXPENSE".equals(t.getType().name()))
-            .mapToDouble(Transaction::getAmount)
+            .filter(t -> "EXPENSE".equals(t.type().name()))
+            .mapToDouble(TransactionExportRow::amount)
             .sum();
 
         Cell totalCell = summaryRow.createCell(4);

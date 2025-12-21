@@ -1,6 +1,12 @@
 package com.fajars.expensetracker.wallet.usecase;
 
-import com.fajars.expensetracker.wallet.*;
+import com.fajars.expensetracker.user.domain.User;
+import com.fajars.expensetracker.wallet.api.CreateWalletRequest;
+import com.fajars.expensetracker.wallet.api.WalletResponse;
+import com.fajars.expensetracker.wallet.domain.Currency;
+import com.fajars.expensetracker.wallet.domain.Wallet;
+import com.fajars.expensetracker.wallet.domain.WalletRepository;
+import com.fajars.expensetracker.wallet.usecase.createwallet.CreateWalletUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,7 +55,7 @@ class CreateWalletUseCaseTest {
 
         Wallet savedWallet = Wallet.builder()
                 .id(UUID.randomUUID())
-                .user(com.fajars.expensetracker.user.User.builder().id(userId).build())
+                .user(User.builder().id(userId).build())
                 .name("Main Wallet")
                 .currency(Currency.IDR)
                 .initialBalance(1000000.0)

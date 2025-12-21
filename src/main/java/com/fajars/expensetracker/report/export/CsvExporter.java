@@ -1,16 +1,15 @@
 package com.fajars.expensetracker.report.export;
 
-import com.fajars.expensetracker.transaction.Transaction;
+import com.fajars.expensetracker.transaction.projection.TransactionExportRow;
 import com.opencsv.CSVWriter;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * Service for exporting data to CSV format using OpenCSV.
@@ -34,7 +33,7 @@ public class CsvExporter {
      * @param transactions list of transactions to export
      * @return CSV file content as byte array
      */
-    public byte[] exportTransactionsToCsv(List<Transaction> transactions) {
+    public byte[] exportTransactionsToCsv(List<TransactionExportRow> transactions) {
         log.debug("Exporting {} transactions to CSV", transactions.size());
 
         try (ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -57,14 +56,14 @@ public class CsvExporter {
             csvWriter.writeNext(header);
 
             // Write data rows
-            for (Transaction t : transactions) {
+            for (TransactionExportRow t : transactions) {
                 String[] row = {
-                    t.getDate().format(DATE_FORMATTER),
-                    formatType(t.getType().name()),
-                    t.getCategory() != null ? t.getCategory().getName() : "-",
-                    t.getWallet() != null ? t.getWallet().getName() : "-",
-                    formatAmount(t.getAmount()),
-                    t.getNote() != null ? t.getNote() : ""
+                    t.date().format(DATE_FORMATTER),
+                    formatType(t.type().name()),
+                    t.categoryName() != null ? t.categoryName() : "-",
+                    t.walletName() != null ? t.walletName() : "-",
+                    formatAmount(t.amount()),
+                    t.note() != null ? t.note() : ""
                 };
                 csvWriter.writeNext(row);
             }

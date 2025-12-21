@@ -1,6 +1,6 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { Rate, Trend, Counter } from 'k6/metrics';
+import { Rate, Counter } from 'k6/metrics';
 
 // Custom metrics
 const errorRate = new Rate('errors');
@@ -8,23 +8,26 @@ const authSuccessRate = new Rate('auth_success');
 const walletOperations = new Counter('wallet_operations');
 const categoryOperations = new Counter('category_operations');
 const transactionOperations = new Counter('transaction_operations');
-const dashboardRequests = new Counter('dashboard_requests');
+const debtOperations = new Counter('debt_operations');
+const exportOperations = new Counter('export_operations');
 
 // Configuration
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8081';
 
-// Test configuration
+// Test configuration - 100 users with 7000 transactions each
 export const options = {
-  stages: [
-    { duration: '10s', target: 10 },  // Ramp-up to 10 users
-    { duration: '5m', target: 10 },   // Stay at 10 users for 5 minutes
-    { duration: '10s', target: 0 },   // Ramp-down to 0 users
-  ],
+  scenarios: {
+    load_test: {
+      executor: 'per-vu-iterations',
+      vus: 100,
+      iterations: 1,
+      maxDuration: '3h',
+    },
+  },
   thresholds: {
-    'http_req_duration': ['p(95)<500', 'p(99)<1000'],
-    'http_req_failed': ['rate<0.01'],
-    'errors': ['rate<0.01'],
-    'auth_success': ['rate>0.99'],
+    'http_req_duration': ['p(95)<2000', 'p(99)<5000'],
+    'http_req_failed': ['rate<0.05'],
+    'errors': ['rate<0.05'],
   },
 };
 
@@ -70,32 +73,33 @@ export default function () {
   // Scenario 1: User Registration & Authentication
   // ============================================
 
-  // Register user (only once per VU)
-  if (__ITER === 0) {
-    const registerPayload = JSON.stringify({
-      email: userEmail,
-      password: userPassword,
-      name: userName,
-    });
+  console.log(`[VU ${__VU}] Starting test - Registering user ${userEmail}`);
 
-    const registerRes = http.post(`${BASE_URL}/auth/register`, registerPayload, {
-      headers: { 'Content-Type': 'application/json' },
-      tags: { name: 'Register' },
-    });
+  // Register user
+  const registerPayload = JSON.stringify({
+    email: userEmail,
+    password: userPassword,
+    name: userName,
+  });
 
-    const registerSuccess = check(registerRes, {
-      'registration status is 200 or 409 (already exists)': (r) => r.status === 200 || r.status === 409,
-    });
+  const registerRes = http.post(`${BASE_URL}/api/v1/auth/register`, registerPayload, {
+    headers: { 'Content-Type': 'application/json' },
+    tags: { name: 'Register' },
+  });
 
-    if (!registerSuccess) {
-      console.log(`Registration failed for ${userEmail}: ${registerRes.status} ${registerRes.body}`);
-    }
+  const registerSuccess = check(registerRes, {
+    'registration status is 200 or 409 (already exists)': (r) => r.status === 200 || r.status === 409,
+  });
 
-    authSuccessRate.add(registerSuccess);
-    errorRate.add(!registerSuccess);
-
-    sleep(1);
+  if (!registerSuccess) {
+    console.log(`[VU ${__VU}] Registration failed: ${registerRes.status} ${registerRes.body}`);
+    errorRate.add(1);
+    return;
   }
+
+  authSuccessRate.add(registerSuccess);
+  console.log(`[VU ${__VU}] Registration successful`);
+  sleep(0.5);
 
   // Login to get JWT token
   const loginPayload = JSON.stringify({
@@ -103,7 +107,7 @@ export default function () {
     password: userPassword,
   });
 
-  const loginRes = http.post(`${BASE_URL}/auth/login`, loginPayload, {
+  const loginRes = http.post(`${BASE_URL}/api/v1/auth/login`, loginPayload, {
     headers: { 'Content-Type': 'application/json' },
     tags: { name: 'Login' },
   });
@@ -129,8 +133,8 @@ export default function () {
   }
 
   authSuccessRate.add(loginSuccess);
-  errorRate.add(!loginSuccess);
-  sleep(1);
+  console.log(`[VU ${__VU}] Login successful`);
+  sleep(0.5);
 
   const headers = {
     'Content-Type': 'application/json',
@@ -138,115 +142,59 @@ export default function () {
   };
 
   // ============================================
-  // Scenario 2: Wallet CRUD Operations (30 requests)
+  // Scenario 2: Create 10 Wallets
   // ============================================
 
-  // Create Wallet
-  for (let i = 0; i < 3; i++) {
+  console.log(`[VU ${__VU}] Creating 10 wallets...`);
+  const walletIds = [];
+
+  for (let i = 0; i < 10; i++) {
     const createWalletPayload = JSON.stringify({
-      name: `Wallet ${randomString(5)}`,
+      name: `Wallet-${__VU}-${i}`,
       currency: randomCurrency(),
       initialBalance: randomInt(100000, 10000000),
     });
 
-    const createWalletRes = http.post(`${BASE_URL}/wallets`, createWalletPayload, {
+    const createWalletRes = http.post(`${BASE_URL}/api/v1/wallets`, createWalletPayload, {
       headers: headers,
       tags: { name: 'CreateWallet' },
     });
 
     const createSuccess = check(createWalletRes, {
       'create wallet status is 201': (r) => r.status === 201,
-      'wallet has id': (r) => {
-        if (r.status === 201) {
-          const body = JSON.parse(r.body);
-          if (i === 0 && body.id) {
-            walletId = body.id; // Store first wallet ID for later use
-          }
-          return body.id && body.id.length > 0;
-        }
-        return false;
-      },
     });
+
+    if (createSuccess && createWalletRes.status === 201) {
+      const body = JSON.parse(createWalletRes.body);
+      walletIds.push(body.id);
+      if (i === 0) {
+        walletId = body.id; // Store first wallet ID
+      }
+    }
 
     walletOperations.add(1);
     errorRate.add(!createSuccess);
-    sleep(randomInt(1, 2));
+
+    if ((i + 1) % 5 === 0) {
+      console.log(`[VU ${__VU}] Created ${i + 1}/10 wallets`);
+    }
   }
 
-  // List Wallets
+  console.log(`[VU ${__VU}] Completed creating ${walletIds.length} wallets`);
+  sleep(0.5);
+
+  // ============================================
+  // Scenario 3: Create Categories
+  // ============================================
+
+  console.log(`[VU ${__VU}] Creating categories...`);
+
+  // Create 5 expense categories
+  const expenseCategories = [];
   for (let i = 0; i < 5; i++) {
-    const listWalletsRes = http.get(`${BASE_URL}/wallets`, {
-      headers: headers,
-      tags: { name: 'ListWallets' },
-    });
-
-    const listSuccess = check(listWalletsRes, {
-      'list wallets status is 200': (r) => r.status === 200,
-      'list returns array': (r) => {
-        if (r.status === 200) {
-          const body = JSON.parse(r.body);
-          return Array.isArray(body);
-        }
-        return false;
-      },
-    });
-
-    walletOperations.add(1);
-    errorRate.add(!listSuccess);
-    sleep(1);
-  }
-
-  // Get Specific Wallet
-  if (walletId) {
-    for (let i = 0; i < 3; i++) {
-      const getWalletRes = http.get(`${BASE_URL}/wallets/${walletId}`, {
-        headers: headers,
-        tags: { name: 'GetWallet' },
-      });
-
-      const getSuccess = check(getWalletRes, {
-        'get wallet status is 200': (r) => r.status === 200,
-      });
-
-      walletOperations.add(1);
-      errorRate.add(!getSuccess);
-      sleep(1);
-    }
-
-    // Update Wallet
-    for (let i = 0; i < 2; i++) {
-      const updateWalletPayload = JSON.stringify({
-        name: `Updated Wallet ${randomString(5)}`,
-        currency: 'USD',
-        initialBalance: randomInt(200000, 5000000),
-      });
-
-      const updateWalletRes = http.put(`${BASE_URL}/wallets/${walletId}`, updateWalletPayload, {
-        headers: headers,
-        tags: { name: 'UpdateWallet' },
-      });
-
-      const updateSuccess = check(updateWalletRes, {
-        'update wallet status is 200': (r) => r.status === 200,
-      });
-
-      walletOperations.add(1);
-      errorRate.add(!updateSuccess);
-      sleep(1);
-    }
-  }
-
-  // ============================================
-  // Scenario 3: Category CRUD Operations (25 requests)
-  // ============================================
-
-  // Create Categories
-  const categoryTypes = ['EXPENSE', 'EXPENSE', 'INCOME'];
-  for (let i = 0; i < categoryTypes.length; i++) {
-    const type = categoryTypes[i];
     const createCategoryPayload = JSON.stringify({
-      name: `${randomCategoryName(type)} ${randomString(3)}`,
-      type: type,
+      name: `Expense-${__VU}-${randomCategoryName('EXPENSE')}-${i}`,
+      type: 'EXPENSE',
     });
 
     const createCategoryRes = http.post(`${BASE_URL}/api/v1/categories`, createCategoryPayload, {
@@ -256,218 +204,236 @@ export default function () {
 
     const createSuccess = check(createCategoryRes, {
       'create category status is 201': (r) => r.status === 201,
-      'category has id': (r) => {
-        if (r.status === 201) {
-          const body = JSON.parse(r.body);
-          if (i === 0 && body.id) {
-            categoryId = body.id; // Store first category ID
-          }
-          return body.id && body.id.length > 0;
-        }
-        return false;
-      },
     });
+
+    if (createSuccess && createCategoryRes.status === 201) {
+      const body = JSON.parse(createCategoryRes.body);
+      expenseCategories.push(body.id);
+      if (!categoryId) categoryId = body.id;
+    }
 
     categoryOperations.add(1);
     errorRate.add(!createSuccess);
-    sleep(randomInt(1, 2));
   }
 
-  // List Categories
-  for (let i = 0; i < 8; i++) {
-    const listCategoriesRes = http.get(`${BASE_URL}/api/v1/categories`, {
-      headers: headers,
-      tags: { name: 'ListCategories' },
+  // Create 2 income categories
+  const incomeCategories = [];
+  for (let i = 0; i < 2; i++) {
+    const createCategoryPayload = JSON.stringify({
+      name: `Income-${__VU}-${randomCategoryName('INCOME')}-${i}`,
+      type: 'INCOME',
     });
 
-    const listSuccess = check(listCategoriesRes, {
-      'list categories status is 200': (r) => r.status === 200,
+    const createCategoryRes = http.post(`${BASE_URL}/api/v1/categories`, createCategoryPayload, {
+      headers: headers,
+      tags: { name: 'CreateCategory' },
     });
+
+    const createSuccess = check(createCategoryRes, {
+      'create category status is 201': (r) => r.status === 201,
+    });
+
+    if (createSuccess && createCategoryRes.status === 201) {
+      const body = JSON.parse(createCategoryRes.body);
+      incomeCategories.push(body.id);
+    }
 
     categoryOperations.add(1);
-    errorRate.add(!listSuccess);
-    sleep(1);
+    errorRate.add(!createSuccess);
   }
 
-  // Get Specific Category
-  if (categoryId) {
-    for (let i = 0; i < 5; i++) {
-      const getCategoryRes = http.get(`${BASE_URL}/api/v1/categories/${categoryId}`, {
-        headers: headers,
-        tags: { name: 'GetCategory' },
-      });
-
-      const getSuccess = check(getCategoryRes, {
-        'get category status is 200': (r) => r.status === 200,
-      });
-
-      categoryOperations.add(1);
-      errorRate.add(!getSuccess);
-      sleep(1);
-    }
-
-    // Update Category
-    for (let i = 0; i < 2; i++) {
-      const updateCategoryPayload = JSON.stringify({
-        name: `Updated Category ${randomString(4)}`,
-      });
-
-      const updateCategoryRes = http.put(`${BASE_URL}/api/v1/categories/${categoryId}`, updateCategoryPayload, {
-        headers: headers,
-        tags: { name: 'UpdateCategory' },
-      });
-
-      const updateSuccess = check(updateCategoryRes, {
-        'update category status is 200': (r) => r.status === 200,
-      });
-
-      categoryOperations.add(1);
-      errorRate.add(!updateSuccess);
-      sleep(1);
-    }
-  }
+  const allCategories = [...expenseCategories, ...incomeCategories];
+  console.log(`[VU ${__VU}] Created ${allCategories.length} categories`);
+  sleep(0.5);
 
   // ============================================
-  // Scenario 4: Transaction Operations (30 requests)
+  // Scenario 4: Create 7,000 Transactions
   // ============================================
 
-  if (walletId && categoryId) {
-    // Create Transactions
-    for (let i = 0; i < 10; i++) {
+  if (walletIds.length > 0 && allCategories.length > 0) {
+    console.log(`[VU ${__VU}] Creating 7,000 transactions...`);
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let i = 0; i < 7000; i++) {
+      // Random wallet and category
+      const randomWallet = walletIds[randomInt(0, walletIds.length - 1)];
+      const isExpense = i % 3 !== 0; // 2/3 expense, 1/3 income
+      const randomCategory = isExpense
+        ? expenseCategories[randomInt(0, expenseCategories.length - 1)]
+        : incomeCategories[randomInt(0, incomeCategories.length - 1)];
+
       const transactionDate = new Date();
-      transactionDate.setDate(transactionDate.getDate() - randomInt(0, 30));
+      transactionDate.setDate(transactionDate.getDate() - randomInt(0, 365));
 
       const createTransactionPayload = JSON.stringify({
-        walletId: walletId,
-        categoryId: categoryId,
-        type: i % 3 === 0 ? 'INCOME' : 'EXPENSE',
+        walletId: randomWallet,
+        categoryId: randomCategory,
+        type: isExpense ? 'EXPENSE' : 'INCOME',
         amount: randomInt(10000, 1000000),
-        note: `Transaction ${randomString(6)}`,
+        note: `Transaction-${__VU}-${i}`,
         date: transactionDate.toISOString(),
       });
 
-      const createTransactionRes = http.post(`${BASE_URL}/transactions`, createTransactionPayload, {
+      const createTransactionRes = http.post(`${BASE_URL}/api/v1/transactions`, createTransactionPayload, {
         headers: headers,
         tags: { name: 'CreateTransaction' },
       });
 
       const createSuccess = check(createTransactionRes, {
         'create transaction status is 201': (r) => r.status === 201,
-        'transaction has id': (r) => {
-          if (r.status === 201) {
-            const body = JSON.parse(r.body);
-            if (i === 0 && body.id) {
-              transactionId = body.id;
-            }
-            return body.id && body.id.length > 0;
-          }
-          return false;
-        },
       });
+
+      if (createSuccess) {
+        successCount++;
+      } else {
+        errorCount++;
+      }
 
       transactionOperations.add(1);
       errorRate.add(!createSuccess);
-      sleep(randomInt(1, 3));
-    }
 
-    // List Transactions
-    for (let i = 0; i < 10; i++) {
-      const listTransactionsRes = http.get(`${BASE_URL}/transactions`, {
-        headers: headers,
-        tags: { name: 'ListTransactions' },
-      });
-
-      const listSuccess = check(listTransactionsRes, {
-        'list transactions status is 200': (r) => r.status === 200,
-      });
-
-      transactionOperations.add(1);
-      errorRate.add(!listSuccess);
-      sleep(1);
-    }
-
-    // Update Transaction
-    if (transactionId) {
-      for (let i = 0; i < 3; i++) {
-        const updateTransactionPayload = JSON.stringify({
-          walletId: walletId,
-          categoryId: categoryId,
-          type: 'EXPENSE',
-          amount: randomInt(50000, 500000),
-          note: `Updated Transaction ${randomString(5)}`,
-          date: new Date().toISOString(),
-        });
-
-        const updateTransactionRes = http.put(`${BASE_URL}/transactions/${transactionId}`, updateTransactionPayload, {
-          headers: headers,
-          tags: { name: 'UpdateTransaction' },
-        });
-
-        const updateSuccess = check(updateTransactionRes, {
-          'update transaction status is 200': (r) => r.status === 200,
-        });
-
-        transactionOperations.add(1);
-        errorRate.add(!updateSuccess);
-        sleep(1);
+      // Progress logging every 1000 transactions
+      if ((i + 1) % 1000 === 0) {
+        console.log(`[VU ${__VU}] Created ${i + 1}/7000 transactions (Success: ${successCount}, Errors: ${errorCount})`);
       }
     }
-  }
 
-  // ============================================
-  // Scenario 5: Dashboard & Analytics (15 requests)
-  // ============================================
-
-  // Get Dashboard Summary
-  for (let i = 0; i < 10; i++) {
-    const dashboardRes = http.get(`${BASE_URL}/dashboard/summary`, {
-      headers: headers,
-      tags: { name: 'Dashboard' },
-    });
-
-    const dashboardSuccess = check(dashboardRes, {
-      'dashboard status is 200': (r) => r.status === 200,
-    });
-
-    dashboardRequests.add(1);
-    errorRate.add(!dashboardSuccess);
-    sleep(randomInt(2, 4));
-  }
-
-  // Get Current User
-  for (let i = 0; i < 5; i++) {
-    const meRes = http.get(`${BASE_URL}/me`, {
-      headers: headers,
-      tags: { name: 'GetCurrentUser' },
-    });
-
-    const meSuccess = check(meRes, {
-      'get current user status is 200': (r) => r.status === 200,
-      'user has email': (r) => {
-        if (r.status === 200) {
-          const body = JSON.parse(r.body);
-          return body.email === userEmail;
-        }
-        return false;
-      },
-    });
-
-    errorRate.add(!meSuccess);
+    console.log(`[VU ${__VU}] Completed creating transactions - Success: ${successCount}, Errors: ${errorCount}`);
     sleep(1);
+  } else {
+    console.log(`[VU ${__VU}] Skipping transactions - no wallets or categories available`);
   }
 
-  sleep(randomInt(1, 3));
+  // ============================================
+  // Scenario 5: Create 1,000 Debts
+  // ============================================
+
+  console.log(`[VU ${__VU}] Creating 1,000 debts...`);
+
+  let debtSuccessCount = 0;
+  let debtErrorCount = 0;
+
+  for (let i = 0; i < 1000; i++) {
+    const debtType = i % 2 === 0 ? 'PAYABLE' : 'RECEIVABLE';
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + randomInt(7, 365));
+
+    const createDebtPayload = JSON.stringify({
+      type: debtType,
+      counterpartyName: `Person-${__VU}-${i}`,
+      totalAmount: randomInt(100000, 10000000),
+      dueDate: dueDate.toISOString(),
+      note: `Debt-${__VU}-${i}`,
+    });
+
+    const createDebtRes = http.post(`${BASE_URL}/api/v1/debts`, createDebtPayload, {
+      headers: headers,
+      tags: { name: 'CreateDebt' },
+    });
+
+    const createSuccess = check(createDebtRes, {
+      'create debt status is 201': (r) => r.status === 201,
+    });
+
+    if (createSuccess) {
+      debtSuccessCount++;
+    } else {
+      debtErrorCount++;
+    }
+
+    debtOperations.add(1);
+    errorRate.add(!createSuccess);
+
+    // Progress logging every 200 debts
+    if ((i + 1) % 200 === 0) {
+      console.log(`[VU ${__VU}] Created ${i + 1}/1000 debts (Success: ${debtSuccessCount}, Errors: ${debtErrorCount})`);
+    }
+  }
+
+  console.log(`[VU ${__VU}] Completed creating debts - Success: ${debtSuccessCount}, Errors: ${debtErrorCount}`);
+  sleep(1);
+
+  // ============================================
+  // Scenario 6: Export to CSV and Excel
+  // ============================================
+
+  console.log(`[VU ${__VU}] Exporting transactions to CSV...`);
+
+  // Export to CSV
+  const exportCsvPayload = JSON.stringify({
+    format: 'CSV',
+    type: 'TRANSACTIONS',
+    filter: null,
+  });
+
+  const exportCsvRes = http.post(`${BASE_URL}/api/v1/export/transactions`, exportCsvPayload, {
+    headers: headers,
+    tags: { name: 'ExportCSV' },
+  });
+
+  const csvSuccess = check(exportCsvRes, {
+    'export CSV status is 200 or 403 (premium)': (r) => r.status === 200 || r.status === 403,
+  });
+
+  exportOperations.add(1);
+  if (exportCsvRes.status === 403) {
+    console.log(`[VU ${__VU}] Export CSV blocked - Premium feature`);
+  } else if (csvSuccess) {
+    console.log(`[VU ${__VU}] Export CSV successful`);
+  } else {
+    console.log(`[VU ${__VU}] Export CSV failed: ${exportCsvRes.status}`);
+    errorRate.add(1);
+  }
+
+  sleep(1);
+
+  // Export to Excel
+  console.log(`[VU ${__VU}] Exporting transactions to Excel...`);
+
+  const exportExcelPayload = JSON.stringify({
+    format: 'EXCEL',
+    type: 'TRANSACTIONS',
+    filter: null,
+  });
+
+  const exportExcelRes = http.post(`${BASE_URL}/api/v1/export/transactions`, exportExcelPayload, {
+    headers: headers,
+    tags: { name: 'ExportExcel' },
+  });
+
+  const excelSuccess = check(exportExcelRes, {
+    'export Excel status is 200 or 403 (premium)': (r) => r.status === 200 || r.status === 403,
+  });
+
+  exportOperations.add(1);
+  if (exportExcelRes.status === 403) {
+    console.log(`[VU ${__VU}] Export Excel blocked - Premium feature`);
+  } else if (excelSuccess) {
+    console.log(`[VU ${__VU}] Export Excel successful`);
+  } else {
+    console.log(`[VU ${__VU}] Export Excel failed: ${exportExcelRes.status}`);
+    errorRate.add(1);
+  }
+
+  console.log(`[VU ${__VU}] ==> TEST COMPLETED SUCCESSFULLY`);
 }
 
 // Summary handler
 export function handleSummary(data) {
   console.log('\n======================================');
-  console.log('PERFORMANCE TEST SUMMARY');
+  console.log('LOAD TEST SUMMARY - 100 USERS');
   console.log('======================================\n');
 
   console.log('Test Configuration:');
-  console.log(`  Virtual Users: 10`);
-  console.log(`  Duration: ~5 minutes`);
+  console.log(`  Virtual Users: 100`);
+  console.log(`  Per User Tasks:`);
+  console.log(`    - 1 Registration`);
+  console.log(`    - 10 Wallets`);
+  console.log(`    - 7,000 Transactions`);
+  console.log(`    - 1,000 Debts`);
+  console.log(`    - 2 Exports (CSV + Excel)`);
   console.log(`  Base URL: ${BASE_URL}\n`);
 
   console.log('HTTP Metrics:');
@@ -484,15 +450,22 @@ export function handleSummary(data) {
   console.log(`  Max: ${data.metrics.http_req_duration.values.max.toFixed(2)}ms\n`);
 
   console.log('Custom Metrics:');
-  console.log(`  Auth Success Rate: ${(data.metrics.auth_success.values.rate * 100).toFixed(2)}%`);
-  console.log(`  Wallet Operations: ${data.metrics.wallet_operations.values.count}`);
-  console.log(`  Category Operations: ${data.metrics.category_operations.values.count}`);
-  console.log(`  Transaction Operations: ${data.metrics.transaction_operations.values.count}`);
-  console.log(`  Dashboard Requests: ${data.metrics.dashboard_requests.values.count}\n`);
+  console.log(`  Auth Success Rate: ${(data.metrics.auth_success?.values.rate * 100 || 0).toFixed(2)}%`);
+  console.log(`  Wallet Operations: ${data.metrics.wallet_operations?.values.count || 0}`);
+  console.log(`  Category Operations: ${data.metrics.category_operations?.values.count || 0}`);
+  console.log(`  Transaction Operations: ${data.metrics.transaction_operations?.values.count || 0}`);
+  console.log(`  Debt Operations: ${data.metrics.debt_operations?.values.count || 0}`);
+  console.log(`  Export Operations: ${data.metrics.export_operations?.values.count || 0}\n`);
+
+  console.log('Expected Totals (100 users):');
+  console.log(`  Wallets: 1,000 (100 users × 10)`);
+  console.log(`  Transactions: 700,000 (100 users × 7,000)`);
+  console.log(`  Debts: 100,000 (100 users × 1,000)`);
+  console.log(`  Exports: 200 (100 users × 2)\n`);
 
   console.log('Iterations:');
   console.log(`  Total: ${data.metrics.iterations.values.count}`);
-  console.log(`  Per VU: ~${Math.round(data.metrics.iterations.values.count / 10)}\n`);
+  console.log(`  Expected: 100 (1 iteration per user)\n`);
 
   console.log('======================================\n');
 

@@ -3,10 +3,11 @@ package com.fajars.expensetracker.user.usecase;
 import com.fajars.expensetracker.common.exception.BusinessException;
 import com.fajars.expensetracker.common.logging.BusinessEventLogger;
 import com.fajars.expensetracker.common.metrics.MetricsService;
-import com.fajars.expensetracker.user.ProfileResponse;
-import com.fajars.expensetracker.user.UpdateProfileRequest;
-import com.fajars.expensetracker.user.User;
-import com.fajars.expensetracker.user.UserRepository;
+import com.fajars.expensetracker.common.security.CurrentUserProvider;
+import com.fajars.expensetracker.user.api.ProfileResponse;
+import com.fajars.expensetracker.user.api.UpdateProfileRequest;
+import com.fajars.expensetracker.user.domain.User;
+import com.fajars.expensetracker.user.domain.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,10 +32,12 @@ public class UpdateUserProfileUseCase implements UpdateUserProfile {
     private final GetUserProfile getUserProfile;
     private final MetricsService metricsService;
     private final BusinessEventLogger businessEventLogger;
+    private final CurrentUserProvider currentUserProvider;
 
     @Override
     @Transactional
-    public ProfileResponse updateProfile(UUID userId, UpdateProfileRequest request) {
+    public ProfileResponse updateProfile(UpdateProfileRequest request) {
+        UUID userId = currentUserProvider.getUserId();
         log.info("Updating profile for user: {}", userId);
 
         // Get user
@@ -78,7 +81,7 @@ public class UpdateUserProfileUseCase implements UpdateUserProfile {
         }
 
         // Return updated profile
-        return getUserProfile.getProfile(userId);
+        return getUserProfile.getProfile();
     }
 
     /**

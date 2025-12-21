@@ -1,24 +1,28 @@
 package com.fajars.expensetracker.subscription.usecase;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.fajars.expensetracker.common.exception.BusinessException;
-import com.fajars.expensetracker.subscription.Subscription;
-import com.fajars.expensetracker.subscription.SubscriptionRepository;
-import com.fajars.expensetracker.subscription.SubscriptionStatus;
-import com.fajars.expensetracker.subscription.SubscriptionTier;
-import com.fajars.expensetracker.user.User;
+import com.fajars.expensetracker.subscription.domain.Subscription;
+import com.fajars.expensetracker.subscription.domain.SubscriptionRepository;
+import com.fajars.expensetracker.subscription.domain.SubscriptionStatus;
+import com.fajars.expensetracker.subscription.domain.SubscriptionTier;
+import com.fajars.expensetracker.subscription.usecase.getusersubscription.GetUserSubscriptionUseCase;
+import com.fajars.expensetracker.user.domain.User;
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.time.LocalDateTime;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for GetUserSubscriptionUseCase.
@@ -60,7 +64,7 @@ class GetUserSubscriptionUseCaseTest {
             .thenReturn(Optional.of(subscription));
 
         // Act
-        Subscription result = useCase.getSubscription(userId);
+        Subscription result = useCase.getSubscription();
 
         // Assert
         assertNotNull(result);
@@ -79,7 +83,7 @@ class GetUserSubscriptionUseCaseTest {
 
         // Act & Assert
         BusinessException exception = assertThrows(BusinessException.class,
-            () -> useCase.getSubscription(userId));
+            () -> useCase.getSubscription());
 
         assertEquals("No active subscription found", exception.getMessage());
         verify(subscriptionRepository).findActiveSubscriptionByUserId(userId);
@@ -100,7 +104,7 @@ class GetUserSubscriptionUseCaseTest {
             .thenReturn(Optional.of(freeSubscription));
 
         // Act
-        Subscription result = useCase.getSubscription(userId);
+        Subscription result = useCase.getSubscription();
 
         // Assert
         assertNotNull(result);

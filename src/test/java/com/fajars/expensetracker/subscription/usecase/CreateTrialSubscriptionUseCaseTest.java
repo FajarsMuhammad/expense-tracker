@@ -1,29 +1,36 @@
 package com.fajars.expensetracker.subscription.usecase;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.fajars.expensetracker.common.exception.BusinessException;
 import com.fajars.expensetracker.common.logging.BusinessEventLogger;
 import com.fajars.expensetracker.common.metrics.MetricsService;
-import com.fajars.expensetracker.subscription.Subscription;
-import com.fajars.expensetracker.subscription.SubscriptionRepository;
-import com.fajars.expensetracker.subscription.SubscriptionStatus;
-import com.fajars.expensetracker.subscription.SubscriptionTier;
-import com.fajars.expensetracker.user.User;
-import com.fajars.expensetracker.user.UserRepository;
+import com.fajars.expensetracker.subscription.domain.Subscription;
+import com.fajars.expensetracker.subscription.domain.SubscriptionRepository;
+import com.fajars.expensetracker.subscription.domain.SubscriptionStatus;
+import com.fajars.expensetracker.subscription.domain.SubscriptionTier;
+import com.fajars.expensetracker.subscription.usecase.checktrialeligibility.CheckTrialEligibility;
+import com.fajars.expensetracker.subscription.usecase.createtrialsubscription.CreateTrialSubscriptionUseCase;
+import com.fajars.expensetracker.user.domain.User;
+import com.fajars.expensetracker.user.domain.UserRepository;
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.time.LocalDateTime;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for CreateTrialSubscriptionUseCase.
@@ -81,7 +88,7 @@ class CreateTrialSubscriptionUseCaseTest {
         when(subscriptionRepository.save(any(Subscription.class))).thenReturn(savedSubscription);
 
         // Act
-        Subscription result = useCase.createTrial(userId);
+        Subscription result = useCase.createTrial();
 
         // Assert
         assertNotNull(result);
@@ -123,7 +130,7 @@ class CreateTrialSubscriptionUseCaseTest {
         when(subscriptionRepository.save(any(Subscription.class))).thenReturn(savedSubscription);
 
         // Act
-        Subscription result = useCase.createTrial(userId);
+        Subscription result = useCase.createTrial();
 
         // Assert
         assertNotNull(result);
@@ -141,7 +148,7 @@ class CreateTrialSubscriptionUseCaseTest {
 
         // Act & Assert
         BusinessException exception = assertThrows(BusinessException.class,
-            () -> useCase.createTrial(userId));
+            () -> useCase.createTrial());
 
         assertEquals("User is not eligible for trial", exception.getMessage());
         verify(checkTrialEligibility).isEligible(userId);
@@ -157,7 +164,7 @@ class CreateTrialSubscriptionUseCaseTest {
 
         // Act & Assert
         BusinessException exception = assertThrows(BusinessException.class,
-            () -> useCase.createTrial(userId));
+            () -> useCase.createTrial());
 
         assertEquals("User not found", exception.getMessage());
         verify(subscriptionRepository, never()).save(any());
@@ -183,7 +190,7 @@ class CreateTrialSubscriptionUseCaseTest {
         when(subscriptionRepository.save(any(Subscription.class))).thenReturn(savedSubscription);
 
         // Act
-        Subscription result = useCase.createTrial(userId);
+        Subscription result = useCase.createTrial();
 
         // Assert
         assertNotNull(result.getEndedAt());

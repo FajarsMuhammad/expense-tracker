@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM eclipse-temurin:21-jdk AS build
+FROM eclipse-temurin:25-jdk AS build
 WORKDIR /app
 
 # Copy gradle wrapper
@@ -19,8 +19,11 @@ COPY src ./src
 RUN ./gradlew bootJar --no-daemon
 
 # Stage 2: Runtime
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
+
+# Install curl for healthcheck
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Create logs directory
 RUN mkdir -p /app/logs && chmod 755 /app/logs
@@ -41,7 +44,15 @@ EXPOSE 8081
 
 # Health check - actuator endpoints are outside context-path
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:8081/actuator/health || exit 1
+  CMD curl -f http://localhost:8081/api/v1/actuator/health || exit 1
 
-# Run application
-ENTRYPOINT ["java", "-jar", "/app/expense-tracker.jar"]
+# Run application with Java 25 optimizations for load testing
+# Virtual threads are enabled via application.yaml (spring.threads.virtual.enabled=true)
+# ZGC is generational by default in Java 25
+ENTRYPOINT ["java", \
+  "-Xmx2g", \
+  "-Xms1g", \
+  "-XX:+UseContainerSupport", \
+  "-XX:+UseZGC", \
+  "-Xlog:gc*:file=/app/logs/gc.log:time,uptime:filecount=5,filesize=10M", \
+  "-jar", "/app/expense-tracker.jar"]

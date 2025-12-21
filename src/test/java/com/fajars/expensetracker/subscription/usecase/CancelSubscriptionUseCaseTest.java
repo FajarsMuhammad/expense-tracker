@@ -1,29 +1,32 @@
 package com.fajars.expensetracker.subscription.usecase;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.fajars.expensetracker.common.exception.BusinessException;
 import com.fajars.expensetracker.common.logging.BusinessEventLogger;
 import com.fajars.expensetracker.common.metrics.MetricsService;
-import com.fajars.expensetracker.subscription.Subscription;
-import com.fajars.expensetracker.subscription.SubscriptionRepository;
-import com.fajars.expensetracker.subscription.SubscriptionStatus;
-import com.fajars.expensetracker.subscription.SubscriptionTier;
-import com.fajars.expensetracker.user.User;
-import com.fajars.expensetracker.user.UserRepository;
+import com.fajars.expensetracker.subscription.domain.Subscription;
+import com.fajars.expensetracker.subscription.domain.SubscriptionRepository;
+import com.fajars.expensetracker.subscription.domain.SubscriptionStatus;
+import com.fajars.expensetracker.subscription.domain.SubscriptionTier;
+import com.fajars.expensetracker.subscription.usecase.cancelsubscription.CancelSubscriptionUseCase;
+import com.fajars.expensetracker.user.domain.User;
+import com.fajars.expensetracker.user.domain.UserRepository;
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.time.LocalDateTime;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for CancelSubscriptionUseCase.
@@ -75,7 +78,7 @@ class CancelSubscriptionUseCaseTest {
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
         // Act
-        useCase.cancel(userId);
+        useCase.cancel();
 
         // Assert
         verify(subscriptionRepository).findActiveSubscriptionByUserId(userId);
@@ -92,7 +95,7 @@ class CancelSubscriptionUseCaseTest {
 
         // Act & Assert
         BusinessException exception = assertThrows(BusinessException.class,
-            () -> useCase.cancel(userId));
+            () -> useCase.cancel());
 
         assertEquals("No active subscription found", exception.getMessage());
         verify(subscriptionRepository).findActiveSubscriptionByUserId(userId);
@@ -115,7 +118,7 @@ class CancelSubscriptionUseCaseTest {
 
         // Act & Assert
         BusinessException exception = assertThrows(BusinessException.class,
-            () -> useCase.cancel(userId));
+            () -> useCase.cancel());
 
         assertEquals("Cannot cancel FREE tier subscription", exception.getMessage());
         verify(subscriptionRepository).findActiveSubscriptionByUserId(userId);
@@ -139,7 +142,7 @@ class CancelSubscriptionUseCaseTest {
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
         // Act
-        useCase.cancel(userId);
+        useCase.cancel();
 
         // Assert
         verify(subscriptionRepository).save(any(Subscription.class));

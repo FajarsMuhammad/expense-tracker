@@ -1,11 +1,12 @@
 package com.fajars.expensetracker.user.usecase;
 
 import com.fajars.expensetracker.common.exception.BusinessException;
-import com.fajars.expensetracker.subscription.Subscription;
-import com.fajars.expensetracker.subscription.SubscriptionRepository;
-import com.fajars.expensetracker.user.ProfileResponse;
-import com.fajars.expensetracker.user.User;
-import com.fajars.expensetracker.user.UserRepository;
+import com.fajars.expensetracker.common.security.CurrentUserProvider;
+import com.fajars.expensetracker.subscription.domain.Subscription;
+import com.fajars.expensetracker.subscription.domain.SubscriptionRepository;
+import com.fajars.expensetracker.user.api.ProfileResponse;
+import com.fajars.expensetracker.user.domain.User;
+import com.fajars.expensetracker.user.domain.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,10 +28,13 @@ public class GetUserProfileUseCase implements GetUserProfile {
 
     private final UserRepository userRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final CurrentUserProvider currentUserProvider;
 
     @Override
     @Transactional(readOnly = true)
-    public ProfileResponse getProfile(UUID userId) {
+    public ProfileResponse getProfile() {
+        UUID userId = currentUserProvider.getUserId();
+
         log.debug("Getting profile for user: {}", userId);
 
         // Get user

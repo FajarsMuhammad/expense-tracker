@@ -71,7 +71,7 @@ Implementasi centralized logging menggunakan **Grafana Loki** sebagai log aggreg
   "@timestamp": "2025-11-25T15:24:07.412Z",
   "level": "INFO",
   "thread": "http-nio-8081-exec-1",
-  "logger": "com.fajars.expensetracker.auth.AuthService",
+  "logger": "com.fajars.expensetracker.auth.service.AuthService",
   "message": "User registered successfully",
   "correlation_id": "2ac36242-6de6-4f02-89b5-9b0693d92fc6",
   "user_email": "testuser@example.com"

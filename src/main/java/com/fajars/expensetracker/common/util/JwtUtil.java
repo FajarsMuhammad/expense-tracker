@@ -2,10 +2,10 @@ package com.fajars.expensetracker.common.util;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +16,7 @@ import java.util.Date;
 
 @Component
 public class JwtUtil {
+
     private final SecretKey key;
     private final long EXPIRATION_TIME = 86400000; // 1 day
 
@@ -35,18 +36,40 @@ public class JwtUtil {
         this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateToken(String username) {
+    public String generateToken(UUID userId, String email) {
         return Jwts.builder()
-                .setSubject(username)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .signWith(key, SignatureAlgorithm.HS256)
-                .compact();
+            .subject(userId.toString())
+            .claim("email", email)
+            .issuedAt(new Date())
+            .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+            .signWith(key)
+            .compact();
     }
 
-    public String extractUsername(String token) {
+    public UUID extractUserId(String token) {
         Claims claims = getClaims(token);
-        return claims != null ? claims.getSubject() : null;
+        return claims != null
+            ? UUID.fromString(claims.getSubject())
+            : null;
+    }
+
+    public String extractEmail(String token) {
+        Claims claims = getClaims(token);
+        return claims != null
+            ? claims.get("email", String.class)
+            : null;
+    }
+
+    /* =====================
+       VALIDATION
+       ===================== */
+
+    public Claims validateAndGetClaims(String token) {
+        Claims claims = getClaims(token);
+        if (claims == null || claims.getExpiration().before(new Date())) {
+            throw new JwtException("Invalid or expired token");
+        }
+        return claims;
     }
 
     public boolean isTokenValid(String token) {
@@ -60,11 +83,11 @@ public class JwtUtil {
 
     private Claims getClaims(String token) {
         try {
-            return Jwts.parserBuilder()
-                    .setSigningKey(key)
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody();
+            return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
         } catch (JwtException | IllegalArgumentException ex) {
             return null;
         }

@@ -1,28 +1,23 @@
 package com.fajars.expensetracker.common.security;
 
-import com.fajars.expensetracker.auth.UserIdentity;
 import com.fajars.expensetracker.common.exception.BusinessException;
 import com.fajars.expensetracker.common.metrics.MetricsService;
 import com.fajars.expensetracker.subscription.SubscriptionHelper;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.core.annotation.Order;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Component;
-
-import java.lang.reflect.Parameter;
-import java.util.UUID;
 
 /**
  * Aspect for enforcing premium feature access control using AOP.
  *
  * <p>This aspect intercepts all controller methods annotated with {@link RequiresPremium}
- * and validates that the authenticated user has PREMIUM or TRIAL subscription tier.
- * FREE users are denied access with HTTP 403 Forbidden response.
+ * and validates that the authenticated user has PREMIUM or TRIAL subscription tier. FREE users are
+ * denied access with HTTP 403 Forbidden response.
  *
  * <p><b>Performance Considerations:</b>
  * <ul>
@@ -34,7 +29,6 @@ import java.util.UUID;
  *
  * <p><b>Security:</b>
  * <ul>
- *   <li>Fail-safe: Throws exception if @AuthenticationPrincipal missing</li>
  *   <li>Logged: All access denials are logged with userId + feature</li>
  *   <li>Metrics: Tracked via premium.access.denied counter</li>
  * </ul>
@@ -51,11 +45,12 @@ public class PremiumFeatureAspect {
 
     private final SubscriptionHelper subscriptionHelper;
     private final MetricsService metricsService;
+    private final CurrentUserProvider currentUserProvider;
 
     /**
      * Intercepts methods annotated with @RequiresPremium and validates tier access.
      *
-     * @param joinPoint the method execution join point
+     * @param joinPoint       the method execution join point
      * @param requiresPremium the annotation instance
      * @return the result of the method execution if access granted
      * @throws Throwable if method execution fails or access denied
@@ -66,8 +61,7 @@ public class PremiumFeatureAspect {
         RequiresPremium requiresPremium
     ) throws Throwable {
 
-        // Extract userId from @AuthenticationPrincipal parameter
-        UUID userId = extractUserId(joinPoint);
+        UUID userId = currentUserProvider.getUserId();
 
         // Check premium status (cached in repository)
         boolean isPremium = subscriptionHelper.isPremiumUser(userId);
@@ -79,7 +73,7 @@ public class PremiumFeatureAspect {
 
             // Log access denial for security audit
             log.warn("Premium feature access denied: userId={}, feature={}, method={}",
-                userId, featureName, joinPoint.getSignature().getName());
+                     userId, featureName, joinPoint.getSignature().getName());
 
             // Track metrics for business intelligence
             metricsService.incrementCounter(
@@ -93,47 +87,15 @@ public class PremiumFeatureAspect {
 
         // Premium/Trial access granted - proceed to method execution
         log.debug("Premium feature access granted: userId={}, tier=PREMIUM/TRIAL",
-            userId);
+                  userId);
 
         return joinPoint.proceed();
     }
 
     /**
-     * Extract userId from @AuthenticationPrincipal UserIdentity parameter.
-     *
-     * <p>Performance: Reflection is used only once per request.
-     * Method signature is cached by Spring AOP proxy.
-     *
-     * @param joinPoint the method execution join point
-     * @return the user ID
-     * @throws IllegalStateException if @AuthenticationPrincipal UserIdentity not found
-     */
-    private UUID extractUserId(ProceedingJoinPoint joinPoint) {
-        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        Parameter[] parameters = signature.getMethod().getParameters();
-        Object[] args = joinPoint.getArgs();
-
-        for (int i = 0; i < parameters.length; i++) {
-            if (parameters[i].isAnnotationPresent(AuthenticationPrincipal.class)) {
-                Object arg = args[i];
-                if (arg instanceof UserIdentity userIdentity) {
-                    return userIdentity.getUserId();
-                }
-            }
-        }
-
-        // Fail-safe: Method contract violated
-        throw new IllegalStateException(
-            "Method annotated with @RequiresPremium must have " +
-            "@AuthenticationPrincipal UserIdentity parameter. " +
-            "Method: " + signature.getMethod().getName()
-        );
-    }
-
-    /**
      * Get feature name from annotation or derive from method name.
      *
-     * @param joinPoint the method execution join point
+     * @param joinPoint       the method execution join point
      * @param requiresPremium the annotation instance
      * @return the feature name for logging/metrics
      */
@@ -154,7 +116,7 @@ public class PremiumFeatureAspect {
      * Get upgrade message from annotation or generate default.
      *
      * @param requiresPremium the annotation instance
-     * @param featureName the feature name
+     * @param featureName     the feature name
      * @return the user-friendly upgrade message
      */
     private String getMessage(RequiresPremium requiresPremium, String featureName) {
@@ -166,7 +128,7 @@ public class PremiumFeatureAspect {
         // Default message with capitalized feature name
         return String.format(
             "%s is a PREMIUM feature. Upgrade your subscription to access advanced analytics, " +
-            "unlimited exports, and detailed reports.",
+                "unlimited exports, and detailed reports.",
             capitalizeFirst(featureName)
         );
     }
