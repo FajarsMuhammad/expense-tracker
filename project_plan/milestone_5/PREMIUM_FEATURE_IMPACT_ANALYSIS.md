@@ -843,7 +843,7 @@ public class WalletService {
 package com.fajars.expensetracker.auth;
 
 import com.fajars.expensetracker.subscription.SubscriptionDto;
-import com.fajars.expensetracker.user.UserResponse;
+import com.fajars.expensetracker.user.api.UserResponse;
 import com.fajars.expensetracker.wallet.WalletDto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;

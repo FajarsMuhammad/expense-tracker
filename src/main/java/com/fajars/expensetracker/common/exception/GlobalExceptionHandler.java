@@ -3,6 +3,8 @@ package com.fajars.expensetracker.common.exception;
 import com.fajars.expensetracker.common.i18n.MessageHelper;
 import com.fajars.expensetracker.common.logging.CorrelationContext;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -16,11 +18,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Global exception handler for all REST controllers.
@@ -43,8 +40,8 @@ public class GlobalExceptionHandler {
     private final MessageHelper messageHelper;
 
     /**
-     * Get the current correlation ID using Java 25 ScopedValue.
-     * Falls back to MDC if not found in ScopedValue (for backward compatibility).
+     * Get the current correlation ID using Java 25 ScopedValue. Falls back to MDC if not found in
+     * ScopedValue (for backward compatibility).
      *
      * @return the correlation ID, or null if not available
      */
@@ -64,8 +61,9 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(
-            MethodArgumentNotValidException ex,
-            HttpServletRequest request) {
+        MethodArgumentNotValidException ex,
+        HttpServletRequest request
+    ) {
 
         log.warn("Validation error on {}: {}", request.getRequestURI(), ex.getMessage());
 
@@ -76,21 +74,22 @@ public class GlobalExceptionHandler {
             Object rejectedValue = ((FieldError) error).getRejectedValue();
 
             validationErrors.add(ErrorResponse.ValidationError.builder()
-                    .field(fieldName)
-                    .message(errorMessage)
-                    .rejectedValue(rejectedValue != null ? rejectedValue.toString() : null)
-                    .build());
+                                     .field(fieldName)
+                                     .message(errorMessage)
+                                     .rejectedValue(
+                                         rejectedValue != null ? rejectedValue.toString() : null)
+                                     .build());
         });
 
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(java.time.LocalDateTime.now().toString())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error(messageHelper.getMessage("validation.failed"))
-                .message(messageHelper.getMessage("validation.failed"))
-                .path(request.getRequestURI())
-                .correlationId(getCorrelationId())
-                .validationErrors(validationErrors)
-                .build();
+            .timestamp(java.time.LocalDateTime.now().toString())
+            .status(HttpStatus.BAD_REQUEST.value())
+            .error(messageHelper.getMessage("validation.failed"))
+            .message(messageHelper.getMessage("validation.failed"))
+            .path(request.getRequestURI())
+            .correlationId(getCorrelationId())
+            .validationErrors(validationErrors)
+            .build();
 
         return ResponseEntity.badRequest().body(errorResponse);
     }
@@ -100,23 +99,25 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(
-            MethodArgumentTypeMismatchException ex,
-            HttpServletRequest request) {
+        MethodArgumentTypeMismatchException ex,
+        HttpServletRequest request
+    ) {
 
         log.warn("Type mismatch error on {}: {}", request.getRequestURI(), ex.getMessage());
 
         String message = String.format("Parameter '%s' should be of type %s",
-                ex.getName(),
-                ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "unknown");
+                                       ex.getName(),
+                                       ex.getRequiredType() != null ? ex.getRequiredType()
+                                           .getSimpleName() : "unknown");
 
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(java.time.LocalDateTime.now().toString())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error(messageHelper.getMessage("common.invalid_request"))
-                .message(message)
-                .path(request.getRequestURI())
-                .correlationId(getCorrelationId())
-                .build();
+            .timestamp(java.time.LocalDateTime.now().toString())
+            .status(HttpStatus.BAD_REQUEST.value())
+            .error(messageHelper.getMessage("common.invalid_request"))
+            .message(message)
+            .path(request.getRequestURI())
+            .correlationId(getCorrelationId())
+            .build();
 
         return ResponseEntity.badRequest().body(errorResponse);
     }
@@ -126,19 +127,20 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(
-            BadCredentialsException ex,
-            HttpServletRequest request) {
+        BadCredentialsException ex,
+        HttpServletRequest request
+    ) {
 
         log.warn("Authentication failed on {}: Bad credentials", request.getRequestURI());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(java.time.LocalDateTime.now().toString())
-                .status(HttpStatus.UNAUTHORIZED.value())
-                .error(messageHelper.getMessage("common.unauthorized"))
-                .message(messageHelper.getMessage("auth.login.invalid_credentials"))
-                .path(request.getRequestURI())
-                .correlationId(getCorrelationId())
-                .build();
+            .timestamp(java.time.LocalDateTime.now().toString())
+            .status(HttpStatus.UNAUTHORIZED.value())
+            .error(messageHelper.getMessage("common.unauthorized"))
+            .message(messageHelper.getMessage("auth.login.invalid_credentials"))
+            .path(request.getRequestURI())
+            .correlationId(getCorrelationId())
+            .build();
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
     }
@@ -146,21 +148,22 @@ public class GlobalExceptionHandler {
     /**
      * Handle general authentication errors
      */
-    @ExceptionHandler(AuthenticationException.class)
+    @ExceptionHandler({AuthenticationException.class, UnauthorizedException.class})
     public ResponseEntity<ErrorResponse> handleAuthenticationException(
-            AuthenticationException ex,
-            HttpServletRequest request) {
+        AuthenticationException ex,
+        HttpServletRequest request
+    ) {
 
         log.warn("Authentication error on {}: {}", request.getRequestURI(), ex.getMessage());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(java.time.LocalDateTime.now().toString())
-                .status(HttpStatus.UNAUTHORIZED.value())
-                .error(messageHelper.getMessage("common.unauthorized"))
-                .message(messageHelper.getMessage("common.unauthorized"))
-                .path(request.getRequestURI())
-                .correlationId(getCorrelationId())
-                .build();
+            .timestamp(java.time.LocalDateTime.now().toString())
+            .status(HttpStatus.UNAUTHORIZED.value())
+            .error(messageHelper.getMessage("common.unauthorized"))
+            .message(messageHelper.getMessage("common.unauthorized"))
+            .path(request.getRequestURI())
+            .correlationId(getCorrelationId())
+            .build();
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
     }
@@ -170,19 +173,20 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(
-            AccessDeniedException ex,
-            HttpServletRequest request) {
+        AccessDeniedException ex,
+        HttpServletRequest request
+    ) {
 
         log.warn("Access denied on {}: {}", request.getRequestURI(), ex.getMessage());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(java.time.LocalDateTime.now().toString())
-                .status(HttpStatus.FORBIDDEN.value())
-                .error(messageHelper.getMessage("common.forbidden"))
-                .message(messageHelper.getMessage("common.forbidden"))
-                .path(request.getRequestURI())
-                .correlationId(getCorrelationId())
-                .build();
+            .timestamp(java.time.LocalDateTime.now().toString())
+            .status(HttpStatus.FORBIDDEN.value())
+            .error(messageHelper.getMessage("common.forbidden"))
+            .message(messageHelper.getMessage("common.forbidden"))
+            .path(request.getRequestURI())
+            .correlationId(getCorrelationId())
+            .build();
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
     }
@@ -192,19 +196,20 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(
-            IllegalArgumentException ex,
-            HttpServletRequest request) {
+        IllegalArgumentException ex,
+        HttpServletRequest request
+    ) {
 
         log.warn("Illegal argument on {}: {}", request.getRequestURI(), ex.getMessage());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(java.time.LocalDateTime.now().toString())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error(messageHelper.getMessage("common.invalid_request"))
-                .message(ex.getMessage())
-                .path(request.getRequestURI())
-                .correlationId(getCorrelationId())
-                .build();
+            .timestamp(java.time.LocalDateTime.now().toString())
+            .status(HttpStatus.BAD_REQUEST.value())
+            .error(messageHelper.getMessage("common.invalid_request"))
+            .message(ex.getMessage())
+            .path(request.getRequestURI())
+            .correlationId(getCorrelationId())
+            .build();
 
         return ResponseEntity.badRequest().body(errorResponse);
     }
@@ -214,19 +219,20 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFound(
-            ResourceNotFoundException ex,
-            HttpServletRequest request) {
+        ResourceNotFoundException ex,
+        HttpServletRequest request
+    ) {
 
         log.warn("Resource not found on {}: {}", request.getRequestURI(), ex.getMessage());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(java.time.LocalDateTime.now().toString())
-                .status(HttpStatus.NOT_FOUND.value())
-                .error(messageHelper.getMessage("common.not_found"))
-                .message(ex.getMessage())
-                .path(request.getRequestURI())
-                .correlationId(getCorrelationId())
-                .build();
+            .timestamp(java.time.LocalDateTime.now().toString())
+            .status(HttpStatus.NOT_FOUND.value())
+            .error(messageHelper.getMessage("common.not_found"))
+            .message(ex.getMessage())
+            .path(request.getRequestURI())
+            .correlationId(getCorrelationId())
+            .build();
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
@@ -236,20 +242,21 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(
-            BusinessException ex,
-            HttpServletRequest request) {
+        BusinessException ex,
+        HttpServletRequest request
+    ) {
 
         log.warn("Business exception on {}: {}", request.getRequestURI(), ex.getMessage());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(java.time.LocalDateTime.now().toString())
-                .status(ex.getStatus().value())
-                .error(ex.getStatus().getReasonPhrase())
-                .message(ex.getMessage())
-                .path(request.getRequestURI())
-                .correlationId(getCorrelationId())
-                .details(ex.getDetails())
-                .build();
+            .timestamp(java.time.LocalDateTime.now().toString())
+            .status(ex.getStatus().value())
+            .error(ex.getStatus().getReasonPhrase())
+            .message(ex.getMessage())
+            .path(request.getRequestURI())
+            .correlationId(getCorrelationId())
+            .details(ex.getDetails())
+            .build();
 
         return ResponseEntity.status(ex.getStatus()).body(errorResponse);
     }
@@ -259,19 +266,20 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(ExternalServiceException.class)
     public ResponseEntity<ErrorResponse> handleExternalServiceException(
-            ExternalServiceException ex,
-            HttpServletRequest request) {
+        ExternalServiceException ex,
+        HttpServletRequest request
+    ) {
 
         log.error("External service error on {}: {}", request.getRequestURI(), ex.getMessage(), ex);
 
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(java.time.LocalDateTime.now().toString())
-                .status(HttpStatus.BAD_GATEWAY.value())
-                .error(messageHelper.getMessage("system.service_unavailable"))
-                .message(messageHelper.getMessage("system.service_unavailable"))
-                .path(request.getRequestURI())
-                .correlationId(getCorrelationId())
-                .build();
+            .timestamp(java.time.LocalDateTime.now().toString())
+            .status(HttpStatus.BAD_GATEWAY.value())
+            .error(messageHelper.getMessage("system.service_unavailable"))
+            .message(messageHelper.getMessage("system.service_unavailable"))
+            .path(request.getRequestURI())
+            .correlationId(getCorrelationId())
+            .build();
 
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(errorResponse);
     }
@@ -281,19 +289,20 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(RateLimitExceededException.class)
     public ResponseEntity<ErrorResponse> handleRateLimitExceeded(
-            RateLimitExceededException ex,
-            HttpServletRequest request) {
+        RateLimitExceededException ex,
+        HttpServletRequest request
+    ) {
 
         log.warn("Rate limit exceeded on {}: {}", request.getRequestURI(), ex.getMessage());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(java.time.LocalDateTime.now().toString())
-                .status(HttpStatus.TOO_MANY_REQUESTS.value())
-                .error(messageHelper.getMessage("system.rate_limit_exceeded"))
-                .message(messageHelper.getMessage("system.rate_limit_exceeded"))
-                .path(request.getRequestURI())
-                .correlationId(getCorrelationId())
-                .build();
+            .timestamp(java.time.LocalDateTime.now().toString())
+            .status(HttpStatus.TOO_MANY_REQUESTS.value())
+            .error(messageHelper.getMessage("system.rate_limit_exceeded"))
+            .message(messageHelper.getMessage("system.rate_limit_exceeded"))
+            .path(request.getRequestURI())
+            .correlationId(getCorrelationId())
+            .build();
 
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorResponse);
     }
@@ -303,25 +312,26 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(
-            Exception ex,
-            HttpServletRequest request) {
+        Exception ex,
+        HttpServletRequest request
+    ) {
 
         // Log full stack trace for unexpected errors
         log.error("Unexpected error on {} [{}]: {}",
-                request.getRequestURI(),
-                request.getMethod(),
-                ex.getMessage(),
-                ex);
+                  request.getRequestURI(),
+                  request.getMethod(),
+                  ex.getMessage(),
+                  ex);
 
         // Don't expose internal error details to client
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(java.time.LocalDateTime.now().toString())
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .error(messageHelper.getMessage("common.internal_error"))
-                .message(messageHelper.getMessage("common.internal_error"))
-                .path(request.getRequestURI())
-                .correlationId(getCorrelationId())
-                .build();
+            .timestamp(java.time.LocalDateTime.now().toString())
+            .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+            .error(messageHelper.getMessage("common.internal_error"))
+            .message(messageHelper.getMessage("common.internal_error"))
+            .path(request.getRequestURI())
+            .correlationId(getCorrelationId())
+            .build();
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }

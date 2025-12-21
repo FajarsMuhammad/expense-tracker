@@ -2,8 +2,14 @@ package com.fajars.expensetracker.debt.usecase;
 
 import com.fajars.expensetracker.common.logging.BusinessEventLogger;
 import com.fajars.expensetracker.common.metrics.MetricsService;
-import com.fajars.expensetracker.debt.*;
-import com.fajars.expensetracker.user.User;
+import com.fajars.expensetracker.debt.api.CreateDebtRequest;
+import com.fajars.expensetracker.debt.api.DebtResponse;
+import com.fajars.expensetracker.debt.domain.Debt;
+import com.fajars.expensetracker.debt.domain.DebtRepository;
+import com.fajars.expensetracker.debt.domain.DebtStatus;
+import com.fajars.expensetracker.debt.domain.DebtType;
+import com.fajars.expensetracker.debt.usecase.createdebt.CreateDebtUseCase;
+import com.fajars.expensetracker.user.domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

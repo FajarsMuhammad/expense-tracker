@@ -1,10 +1,11 @@
 package com.fajars.expensetracker.dashboard.usecase;
 
-import com.fajars.expensetracker.dashboard.DashboardSummaryResponse;
-import com.fajars.expensetracker.transaction.TransactionRepository;
-import com.fajars.expensetracker.wallet.Currency;
-import com.fajars.expensetracker.wallet.Wallet;
-import com.fajars.expensetracker.wallet.WalletRepository;
+import com.fajars.expensetracker.dashboard.api.DashboardSummaryResponse;
+import com.fajars.expensetracker.transaction.domain.TransactionRepository;
+import com.fajars.expensetracker.user.domain.User;
+import com.fajars.expensetracker.wallet.domain.Currency;
+import com.fajars.expensetracker.wallet.domain.Wallet;
+import com.fajars.expensetracker.wallet.domain.WalletRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,7 +45,7 @@ class GetDashboardSummaryUseCaseTest {
 
         wallet = Wallet.builder()
                 .id(walletId)
-                .user(com.fajars.expensetracker.user.User.builder().id(userId).build())
+                .user(User.builder().id(userId).build())
                 .name("Main Wallet")
                 .currency(Currency.IDR)
                 .initialBalance(1000000.0)

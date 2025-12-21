@@ -1,8 +1,8 @@
 package com.fajars.expensetracker.common.config;
 
-import com.fajars.expensetracker.category.Category;
-import com.fajars.expensetracker.category.CategoryRepository;
-import com.fajars.expensetracker.category.CategoryType;
+import com.fajars.expensetracker.category.domain.Category;
+import com.fajars.expensetracker.category.domain.CategoryRepository;
+import com.fajars.expensetracker.category.domain.CategoryType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;

@@ -1,10 +1,12 @@
 package com.fajars.expensetracker.category.usecase;
 
-import com.fajars.expensetracker.category.Category;
-import com.fajars.expensetracker.category.CategoryResponse;
-import com.fajars.expensetracker.category.CategoryRepository;
-import com.fajars.expensetracker.category.CategoryType;
-import com.fajars.expensetracker.category.CreateCategoryRequest;
+import com.fajars.expensetracker.category.domain.Category;
+import com.fajars.expensetracker.category.api.CategoryResponse;
+import com.fajars.expensetracker.category.domain.CategoryRepository;
+import com.fajars.expensetracker.category.domain.CategoryType;
+import com.fajars.expensetracker.category.api.CreateCategoryRequest;
+import com.fajars.expensetracker.category.usecase.createcategory.CreateCategoryUseCase;
+import com.fajars.expensetracker.user.domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,7 +49,7 @@ class CreateCategoryUseCaseTest {
         CreateCategoryRequest request = new CreateCategoryRequest("Freelance", CategoryType.INCOME);
         Category savedCategory = Category.builder()
                 .id(UUID.randomUUID())
-                .user(com.fajars.expensetracker.user.User.builder().id(userId).build())
+                .user(User.builder().id(userId).build())
                 .name("Freelance")
                 .type(CategoryType.INCOME)
                 .createdAt(new Date())

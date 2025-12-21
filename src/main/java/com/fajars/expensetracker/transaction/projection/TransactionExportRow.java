@@ -1,6 +1,6 @@
 package com.fajars.expensetracker.transaction.projection;
 
-import com.fajars.expensetracker.transaction.TransactionType;
+import com.fajars.expensetracker.transaction.api.TransactionType;
 import java.time.LocalDateTime;
 import java.util.UUID;
 

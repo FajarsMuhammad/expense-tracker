@@ -1,9 +1,13 @@
 package com.fajars.expensetracker.user;
 
+import com.fajars.expensetracker.user.api.UserResponse;
+import com.fajars.expensetracker.user.domain.User;
+import com.fajars.expensetracker.user.domain.UserRepository;
 import org.springframework.stereotype.Service;
 
 @Service
 public class UserService {
+
     private final UserRepository userRepository;
 
     public UserService(UserRepository userRepository) {

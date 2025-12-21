@@ -1133,7 +1133,7 @@ grep "ERROR" logs/application.log
   "timestamp": "2024-12-06T10:30:00.123+07:00",
   "level": "INFO",
   "thread": "http-nio-8081-exec-1",
-  "logger": "com.fajars.expensetracker.transaction.TransactionController",
+  "logger": "com.fajars.expensetracker.transaction.api.TransactionController",
   "message": "Transaction created",
   "userId": "user-uuid",
   "transactionId": "transaction-uuid"

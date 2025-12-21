@@ -5,7 +5,7 @@ spring:
     virtual:
       enabled: true  # Enable Java 25 virtual threads for better performance and scalability
   datasource:
-    url: jdbc:postgresql://localhost:5432/expense_tracker?timezone=Asia/Jakarta
+    url: jdbc:postgresql://localhost:5432/expense_tracker_db?timezone=Asia/Jakarta
     username:
     password:
     driver-class-name: org.postgresql.Driver
@@ -98,7 +98,7 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
   level:
     root: INFO
-    com.fajars.expensetracker: INFO  # Changed from DEBUG to reduce logging overhead
+    com.fajars.expensetracker: DEBUG  # Changed from DEBUG to reduce logging overhead
     # For debugging SQL queries, uncomment below (but disable in load testing):
-    # org.hibernate.SQL: DEBUG
-    # org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
