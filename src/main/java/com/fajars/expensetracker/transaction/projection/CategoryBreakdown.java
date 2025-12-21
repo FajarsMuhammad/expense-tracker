@@ -1,6 +1,6 @@
 package com.fajars.expensetracker.transaction.projection;
 
-import com.fajars.expensetracker.transaction.TransactionType;
+import com.fajars.expensetracker.transaction.api.TransactionType;
 
 import java.math.BigDecimal;
 import java.util.UUID;

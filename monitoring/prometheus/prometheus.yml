@@ -18,7 +18,7 @@ global:
 scrape_configs:
   # Expense Tracker Application
   - job_name: 'expense-tracker'
-    metrics_path: '/actuator/prometheus'
+    metrics_path: '/api/v1/actuator/prometheus'
     scrape_interval: 10s
     static_configs:
       - targets: ['host.docker.internal:8081']

@@ -33,7 +33,7 @@ echo -e "${GREEN}✓ K6 is installed$(NC) ($(k6 version))"
 
 # Check if application is running
 echo "Checking if application is running on localhost:8081..."
-if curl -s http://localhost:8081/actuator/health > /dev/null 2>&1; then
+if curl -s http://localhost:8081/api/v1/actuator/health > /dev/null 2>&1; then
     echo -e "${GREEN}✓ Application is running${NC}"
 else
     echo -e "${RED}✗ Application is not running on localhost:8081${NC}"
@@ -76,6 +76,7 @@ echo "Running test... (this will take ~5 minutes)"
 echo ""
 
 k6 run --out json="${REPORT_FILE}" k6-test.js
+#k6 run --out json="${REPORT_FILE}" k6-test-existing-users.js
 
 EXIT_CODE=$?
 

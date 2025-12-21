@@ -3,9 +3,19 @@ package com.fajars.expensetracker.subscription;
 import com.fajars.expensetracker.common.exception.BusinessException;
 import com.fajars.expensetracker.common.logging.BusinessEventLogger;
 import com.fajars.expensetracker.common.metrics.MetricsService;
-import com.fajars.expensetracker.payment.PaymentRepository;
-import com.fajars.expensetracker.user.User;
-import com.fajars.expensetracker.user.UserRepository;
+import com.fajars.expensetracker.payment.domain.PaymentRepository;
+import com.fajars.expensetracker.subscription.domain.Subscription;
+import com.fajars.expensetracker.subscription.domain.SubscriptionRepository;
+import com.fajars.expensetracker.subscription.domain.SubscriptionStatus;
+import com.fajars.expensetracker.subscription.domain.SubscriptionTier;
+import com.fajars.expensetracker.subscription.usecase.activesubcription.ActivateSubscription;
+import com.fajars.expensetracker.subscription.usecase.cancelsubscription.CancelSubscription;
+import com.fajars.expensetracker.subscription.usecase.checktrialeligibility.CheckTrialEligibility;
+import com.fajars.expensetracker.subscription.usecase.createfreesubscription.CreateFreeSubscription;
+import com.fajars.expensetracker.subscription.usecase.createtrialsubscription.CreateTrialSubscription;
+import com.fajars.expensetracker.subscription.usecase.getusersubscription.GetUserSubscription;
+import com.fajars.expensetracker.user.domain.User;
+import com.fajars.expensetracker.user.domain.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,12 +32,12 @@ import java.util.UUID;
  *
  * @deprecated This service is deprecated in favor of use case pattern.
  *             Use the following use cases instead:
- *             - {@link com.fajars.expensetracker.subscription.usecase.CreateFreeSubscription}
- *             - {@link com.fajars.expensetracker.subscription.usecase.CreateTrialSubscription}
- *             - {@link com.fajars.expensetracker.subscription.usecase.ActivateSubscription}
- *             - {@link com.fajars.expensetracker.subscription.usecase.CancelSubscription}
- *             - {@link com.fajars.expensetracker.subscription.usecase.GetUserSubscription}
- *             - {@link com.fajars.expensetracker.subscription.usecase.CheckTrialEligibility}
+ *             - {@link CreateFreeSubscription}
+ *             - {@link CreateTrialSubscription}
+ *             - {@link ActivateSubscription}
+ *             - {@link CancelSubscription}
+ *             - {@link GetUserSubscription}
+ *             - {@link CheckTrialEligibility}
  *             <p>
  *             For helper methods (isPremiumUser, getExportLimit, etc.), use:
  *             - {@link com.fajars.expensetracker.subscription.SubscriptionHelper}

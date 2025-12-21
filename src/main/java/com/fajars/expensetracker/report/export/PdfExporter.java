@@ -1,19 +1,24 @@
 package com.fajars.expensetracker.report.export;
 
-import com.fajars.expensetracker.transaction.Transaction;
-import com.lowagie.text.*;
+import com.fajars.expensetracker.transaction.projection.TransactionExportRow;
+import com.lowagie.text.Chunk;
+import com.lowagie.text.Document;
+import com.lowagie.text.DocumentException;
+import com.lowagie.text.Element;
+import com.lowagie.text.Font;
+import com.lowagie.text.PageSize;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * Service for exporting data to PDF format using OpenPDF.
@@ -40,7 +45,7 @@ public class PdfExporter {
      * @param transactions list of transactions to export
      * @return PDF file content as byte array
      */
-    public byte[] exportTransactionsToPdf(List<Transaction> transactions) {
+    public byte[] exportTransactionsToPdf(List<TransactionExportRow> transactions) {
         log.debug("Exporting {} transactions to PDF", transactions.size());
 
         Document document = new Document(PageSize.A4);
@@ -104,15 +109,15 @@ public class PdfExporter {
     /**
      * Add summary statistics.
      */
-    private void addSummary(Document document, List<Transaction> transactions) throws DocumentException {
+    private void addSummary(Document document, List<TransactionExportRow> transactions) throws DocumentException {
         double totalIncome = transactions.stream()
-            .filter(t -> "INCOME".equals(t.getType().name()))
-            .mapToDouble(Transaction::getAmount)
+            .filter(t -> "INCOME".equals(t.type().name()))
+            .mapToDouble(TransactionExportRow::amount)
             .sum();
 
         double totalExpense = transactions.stream()
-            .filter(t -> "EXPENSE".equals(t.getType().name()))
-            .mapToDouble(Transaction::getAmount)
+            .filter(t -> "EXPENSE".equals(t.type().name()))
+            .mapToDouble(TransactionExportRow::amount)
             .sum();
 
         double netBalance = totalIncome - totalExpense;
@@ -140,7 +145,7 @@ public class PdfExporter {
     /**
      * Add transaction table.
      */
-    private void addTransactionTable(Document document, List<Transaction> transactions)
+    private void addTransactionTable(Document document, List<TransactionExportRow> transactions)
         throws DocumentException {
 
         // Create table with 5 columns
@@ -161,24 +166,24 @@ public class PdfExporter {
         // Add data rows
         Font dataFont = new Font(Font.HELVETICA, 9, Font.NORMAL);
 
-        for (Transaction t : transactions) {
+        for (TransactionExportRow t : transactions) {
             // Date
-            addDataCell(table, t.getDate().format(DATE_FORMATTER), dataFont);
+            addDataCell(table, t.date().format(DATE_FORMATTER), dataFont);
 
             // Type
-            addDataCell(table, formatType(t.getType().name()), dataFont);
+            addDataCell(table, formatType(t.type().name()), dataFont);
 
             // Category
             addDataCell(table,
-                t.getCategory() != null ? t.getCategory().getName() : "-",
+                t.categoryName() != null ? t.categoryName() : "-",
                 dataFont);
 
             // Amount
-            addDataCell(table, String.format("%,.2f", t.getAmount()), dataFont);
+            addDataCell(table, String.format("%,.2f", t.amount()), dataFont);
 
             // Note
             addDataCell(table,
-                t.getNote() != null && !t.getNote().isEmpty() ? t.getNote() : "-",
+                t.note() != null && !t.note().isEmpty() ? t.note() : "-",
                 dataFont);
         }
 

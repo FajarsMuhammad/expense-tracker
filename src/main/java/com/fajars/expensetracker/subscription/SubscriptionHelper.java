@@ -1,5 +1,8 @@
 package com.fajars.expensetracker.subscription;
 
+import com.fajars.expensetracker.subscription.domain.Subscription;
+import com.fajars.expensetracker.subscription.domain.SubscriptionRepository;
+import com.fajars.expensetracker.subscription.domain.SubscriptionTier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

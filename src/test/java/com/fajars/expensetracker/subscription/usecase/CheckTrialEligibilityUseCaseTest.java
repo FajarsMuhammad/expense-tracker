@@ -1,7 +1,8 @@
 package com.fajars.expensetracker.subscription.usecase;
 
-import com.fajars.expensetracker.payment.PaymentRepository;
-import com.fajars.expensetracker.subscription.SubscriptionRepository;
+import com.fajars.expensetracker.payment.domain.PaymentRepository;
+import com.fajars.expensetracker.subscription.domain.SubscriptionRepository;
+import com.fajars.expensetracker.subscription.usecase.checktrialeligibility.CheckTrialEligibilityUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

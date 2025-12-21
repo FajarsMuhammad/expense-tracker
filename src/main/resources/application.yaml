@@ -1,11 +1,22 @@
 spring:
   application:
     name: expense-tracker
+  threads:
+    virtual:
+      enabled: true  # Enable Java 25 virtual threads for better performance and scalability
   datasource:
-    url: jdbc:postgresql://localhost:5432/expense_tracker?timezone=Asia/Jakarta
+    url: jdbc:postgresql://localhost:5432/expense_tracker_db?timezone=Asia/Jakarta
     username:
     password:
     driver-class-name: org.postgresql.Driver
+    # HikariCP Connection Pool Configuration (for load testing)
+    hikari:
+      maximum-pool-size: 20  # Max connections (adjust based on load)
+      minimum-idle: 5  # Min idle connections
+      connection-timeout: 30000  # 30 seconds
+      idle-timeout: 600000  # 10 minutes
+      max-lifetime: 1800000  # 30 minutes
+      leak-detection-threshold: 60000  # Detect leaks after 60 seconds
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -21,6 +32,13 @@ spring:
       hibernate:
         jdbc:
           time_zone: Asia/Jakarta
+          batch_size: 50  # Enable batch inserts/updates (50 statements per batch)
+          fetch_size: 50  # Optimize fetch size for bulk reads
+        order_inserts: true  # Order inserts for better batching
+        order_updates: true  # Order updates for better batching
+        batch_versioned_data: true  # Enable batch updates for versioned entities
+    # Disable open-in-view to prevent lazy loading issues outside transaction
+    open-in-view: false
 
 server:
   port: 8081
@@ -80,4 +98,7 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
   level:
     root: INFO
-    com.fajars.expensetracker: DEBUG
+    com.fajars.expensetracker: DEBUG  # Changed from DEBUG to reduce logging overhead
+    # For debugging SQL queries, uncomment below (but disable in load testing):
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

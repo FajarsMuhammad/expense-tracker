@@ -2,10 +2,10 @@ package com.fajars.expensetracker.subscription.scheduler;
 
 import com.fajars.expensetracker.common.logging.BusinessEventLogger;
 import com.fajars.expensetracker.common.metrics.MetricsService;
-import com.fajars.expensetracker.subscription.Subscription;
-import com.fajars.expensetracker.subscription.SubscriptionRepository;
-import com.fajars.expensetracker.subscription.SubscriptionStatus;
-import com.fajars.expensetracker.subscription.usecase.CreateFreeSubscription;
+import com.fajars.expensetracker.subscription.domain.Subscription;
+import com.fajars.expensetracker.subscription.domain.SubscriptionRepository;
+import com.fajars.expensetracker.subscription.domain.SubscriptionStatus;
+import com.fajars.expensetracker.subscription.usecase.createfreesubscription.CreateFreeSubscription;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

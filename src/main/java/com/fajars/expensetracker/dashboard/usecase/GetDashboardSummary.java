@@ -1,6 +1,6 @@
 package com.fajars.expensetracker.dashboard.usecase;
 
-import com.fajars.expensetracker.dashboard.DashboardSummaryResponse;
+import com.fajars.expensetracker.dashboard.api.DashboardSummaryResponse;
 
 import java.util.UUID;
 

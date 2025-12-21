@@ -1,50 +1,39 @@
-# K6 Performance Testing for Expense Tracker API
+# K6 Load Testing - Expense Tracker
 
-This directory contains K6 load testing scripts for the Expense Tracker REST API.
+Load testing script untuk Expense Tracker API menggunakan k6.
 
 ## Overview
 
-The test simulates **10 virtual users**, each making approximately **100 requests** across different API endpoints over a 5-minute period.
+Test ini mensimulasikan **100 concurrent users**, dimana setiap user melakukan operasi yang sama secara paralel.
 
 ### Test Scenarios
 
-1. **User Registration & Authentication** (10%)
-   - Register new user
-   - Login to obtain JWT token
+Setiap user akan melakukan:
 
-2. **Wallet CRUD Operations** (30%)
-   - Create wallets
-   - List all wallets
-   - Get specific wallet
-   - Update wallet
+1. **Registrasi** - Mendaftar akun baru
+2. **Login** - Mendapatkan JWT token
+3. **Membuat 10 Wallets** - Setiap user membuat 10 wallet dengan currency random
+4. **Membuat 7 Categories** - 5 expense categories + 2 income categories
+5. **Membuat 10,000 Transactions** - Transaksi random di berbagai wallet dan category
+6. **Membuat 1,000 Debts** - 500 PAYABLE + 500 RECEIVABLE
+7. **Export Data** - Export ke CSV dan Excel (akan terblokir jika bukan premium user)
 
-3. **Category CRUD Operations** (25%)
-   - Create categories (INCOME and EXPENSE types)
-   - List all categories
-   - Get specific category
-   - Update category
+### Total Expected Operations
 
-4. **Transaction Operations** (30%)
-   - Create transactions
-   - List transactions
-   - Update transactions
+- **100 users** × 10 wallets = **1,000 wallets**
+- **100 users** × 10,000 transactions = **1,000,000 transactions**
+- **100 users** × 1,000 debts = **100,000 debts**
+- **100 users** × 2 exports = **200 export requests**
 
-5. **Dashboard & Analytics** (15%)
-   - Get dashboard summary
-   - Retrieve current user profile
+**Total HTTP requests**: **~1,100,700 requests**
 
 ## Prerequisites
 
-### 1. Install K6
+### 1. Install k6
 
 **macOS:**
 ```bash
 brew install k6
-```
-
-**Windows:**
-```bash
-choco install k6
 ```
 
 **Linux:**
@@ -56,314 +45,280 @@ sudo apt-get update
 sudo apt-get install k6
 ```
 
-**Verify installation:**
+**Windows:**
 ```bash
-k6 version
+choco install k6
 ```
 
-### 2. Start the Application
+**Docker:**
+```bash
+docker pull grafana/k6
+```
 
-Make sure the Expense Tracker application is running on `http://localhost:8081`:
+### 2. Start Application
 
-**Option 1: Using Gradle**
+Pastikan aplikasi Expense Tracker sudah running di `http://localhost:8081`
+
 ```bash
 ./gradlew bootRun
 ```
 
-**Option 2: Using Docker Compose**
+Atau dengan Docker:
 ```bash
-podman-compose -f docker-compose-monitoring.yml up -d
+docker-compose up -d
 ```
 
-**Verify application is running:**
+Verify:
 ```bash
-curl http://localhost:8081/actuator/health
+curl http://localhost:8081/v1/api/actuator/health
 ```
 
-Expected response: `{"status":"UP"}`
+## Running Tests
 
-### 3. Ensure Database is Running
-
-PostgreSQL must be running and accessible:
-
-```bash
-# Check if PostgreSQL is running
-lsof -i :5432
-
-# Or with Docker/Podman
-podman ps | grep postgres
-```
-
-## Running the Tests
-
-### Basic Run
+### Basic Test (default localhost)
 
 ```bash
 cd performance-tests
 k6 run k6-test.js
 ```
 
-### Run with JSON Output
+### Test with Custom URL
 
 ```bash
-k6 run --out json=reports/results.json k6-test.js
+k6 run -e BASE_URL=http://localhost:8081 k6-test.js
 ```
 
-### Run with Custom Configuration
+### Test with Different User Count
+
+Edit file `k6-test.js` di bagian options:
+
+```javascript
+export const options = {
+  scenarios: {
+    load_test: {
+      executor: 'per-vu-iterations',
+      vus: 50,  // Ubah jumlah user di sini
+      iterations: 1,
+      maxDuration: '2h',
+    },
+  },
+};
+```
+
+### Run with Docker
 
 ```bash
-# Custom base URL
-BASE_URL=http://localhost:8080 k6 run k6-test.js
-
-# Custom number of VUs and duration
-k6 run --vus 20 --duration 10m k6-test.js
-
-# Custom stages
-k6 run --stage 20s:10,10m:10,20s:0 k6-test.js
+docker run --rm -i --network="host" \
+  -v $(pwd):/app \
+  grafana/k6 run /app/k6-test.js
 ```
-
-### Run with Verbose Output
-
-```bash
-k6 run --http-debug k6-test.js
-```
-
-## Understanding the Output
-
-### Console Output
-
-K6 provides real-time metrics during the test:
-
-```
-scenarios: (100.00%) 1 scenario, 10 max VUs, 5m30s max duration
-          ✓ registration status is 200 or 409 (already exists)
-          ✓ login status is 200
-          ✓ login returns token
-          ✓ create wallet status is 201
-          ✓ list wallets status is 200
-          ...
-
-checks.........................: 99.85% ✓ 10234     ✗ 15
-data_received..................: 15 MB  50 kB/s
-data_sent......................: 8.2 MB 27 kB/s
-http_req_blocked...............: avg=156.43µs min=1.8µs   med=4.6µs   max=85.36ms  p(90)=6.8µs   p(95)=8.4µs
-http_req_connecting............: avg=51.81µs  min=0s      med=0s      max=39.94ms  p(90)=0s      p(95)=0s
-http_req_duration..............: avg=245.67ms min=5.02ms  med=189ms   max=2.87s    p(90)=456ms   p(95)=612ms
-http_req_failed................: 0.15%  ✓ 15        ✗ 10234
-http_req_receiving.............: avg=154.34µs min=20.4µs  med=87.5µs  max=13.45ms  p(90)=243µs   p(95)=354µs
-http_req_sending...............: avg=43.76µs  min=8.9µs   med=28.1µs  max=4.21ms   p(90)=72.4µs  p(95)=99.2µs
-http_req_tls_handshaking.......: avg=0s       min=0s      med=0s      max=0s       p(90)=0s      p(95)=0s
-http_req_waiting...............: avg=245.47ms min=4.95ms  med=188ms   max=2.87s    p(90)=456ms   p(95)=611ms
-http_reqs......................: 10249  34.164/s
-iteration_duration.............: avg=17.5s    min=14.2s   med=17.3s   max=25.1s    p(90)=19.8s   p(95)=21.2s
-iterations.....................: 102    0.34/s
-vus............................: 1      min=1       max=10
-vus_max........................: 10     min=10      max=10
-```
-
-### Key Metrics
-
-**Response Times:**
-- `http_req_duration`: Time from start of request to end of response
-- `p(95)`: 95th percentile - 95% of requests are faster than this
-- `p(99)`: 99th percentile - 99% of requests are faster than this
-
-**Throughput:**
-- `http_reqs`: Total number of HTTP requests made
-- `rate`: Requests per second
-
-**Errors:**
-- `http_req_failed`: Percentage of failed requests (4xx, 5xx status codes)
-- `checks`: Percentage of assertion checks that passed
-
-**Custom Metrics:**
-- `auth_success`: Authentication success rate
-- `wallet_operations`: Total wallet CRUD operations
-- `category_operations`: Total category CRUD operations
-- `transaction_operations`: Total transaction operations
-- `dashboard_requests`: Total dashboard/analytics requests
-
-### Success Criteria
-
-✅ **Pass:** Error rate < 1%
-✅ **Pass:** p95 response time < 500ms
-✅ **Pass:** p99 response time < 1000ms
-✅ **Pass:** Auth success rate > 99%
 
 ## Test Configuration
 
-### Load Profile
+### Scenario Executor
 
-| Stage | Duration | Target VUs | Purpose |
-|-------|----------|------------|---------|
-| Ramp-up | 10s | 0 → 10 | Gradually increase load |
-| Sustain | 5m | 10 | Maintain steady load |
-| Ramp-down | 10s | 10 → 0 | Gracefully decrease load |
+- **Type**: `per-vu-iterations`
+- **Virtual Users (VUs)**: 100
+- **Iterations per VU**: 1
+- **Max Duration**: 2 hours
 
-**Total Duration:** ~5 minutes 20 seconds
+### Thresholds
 
-### Request Distribution
+- **p95 Response Time**: < 2000ms
+- **p99 Response Time**: < 5000ms
+- **HTTP Failure Rate**: < 5%
+- **Error Rate**: < 5%
 
-Approximate requests per user (per iteration):
+## Expected Performance
 
-- Authentication: 1 login
-- Wallet Operations: 13 requests
-- Category Operations: 18 requests
-- Transaction Operations: 23 requests
-- Dashboard/Analytics: 15 requests
+### Timing Estimates
 
-**Total per user:** ~70-100 requests (varies due to random sleep times)
+Per user:
+- Registration + Login: ~2 seconds
+- 10 Wallets: ~10-20 seconds
+- 7 Categories: ~7-14 seconds
+- 10,000 Transactions: ~10-20 minutes
+- 1,000 Debts: ~2-5 minutes
+- 2 Exports: ~2-5 seconds
 
-### Test Data
+**Total per user**: ~15-30 minutes
+**Total for 100 users**: ~15-30 minutes (concurrent)
 
-**Users:**
-- Email pattern: `loadtest-user-{1-10}@example.com`
-- Password: `LoadTest123!`
-- Name: `Load Test User {1-10}`
+### Resource Requirements
 
-**Wallets:**
-- Name: Random 5-character string
-- Currency: IDR, USD, or EUR (random)
-- Initial balance: Random 100,000 - 10,000,000
+**Database**:
+- Expect ~1M transaction records
+- Expect ~100K debt records
+- Ensure sufficient disk space and connection pool
 
-**Categories:**
-- Expense types: Groceries, Transport, Entertainment, Bills, Shopping
-- Income types: Salary, Bonus, Investment
-- Names include random 3-4 character suffix
+**Application**:
+- Monitor heap usage during test
+- Recommended: `-Xmx2g -Xms1g`
 
-**Transactions:**
-- Amount: Random 10,000 - 1,000,000
-- Date: Random within last 30 days
-- Type: INCOME or EXPENSE (random)
+## Monitoring During Test
 
-## Troubleshooting
-
-### Error: "connection refused"
-
-**Solution:** Ensure application is running on port 8081
+### Database Connections
 
 ```bash
-lsof -i :8081
-curl http://localhost:8081/actuator/health
+# PostgreSQL
+SELECT count(*) FROM pg_stat_activity;
 ```
 
-### Error: High failure rate
+### Application Logs
 
-**Possible causes:**
-1. Database connection issues
-2. Application not fully started
-3. Insufficient resources (CPU/Memory)
-
-**Solution:**
-- Check application logs
-- Verify database connectivity
-- Reduce number of VUs or duration
-
-### Error: "registration failed"
-
-**Expected behavior:** Registration may fail with 409 (Conflict) after first run because users already exist. This is normal and handled by the script.
-
-**Clean up test data (optional):**
-```sql
-DELETE FROM users WHERE email LIKE 'loadtest-user-%';
+```bash
+tail -f logs/application.log
 ```
 
-### Slow Performance
+### System Resources
 
-**Tips to improve:**
-1. Run test on same machine as application (reduce network latency)
-2. Ensure database has proper indexes
-3. Check system resources (CPU, memory, disk I/O)
-4. Review application logs for slow queries
+```bash
+# CPU and Memory
+htop
 
-## Analyzing Results
+# Docker stats
+docker stats
+```
+
+## Output & Reports
+
+### Console Output
+
+Test akan menampilkan progress untuk setiap user:
+
+```
+[VU 1] Starting test - Registering user loadtest-user-1@example.com
+[VU 1] Registration successful
+[VU 1] Login successful
+[VU 1] Creating 10 wallets...
+[VU 1] Created 5/10 wallets
+[VU 1] Created 10/10 wallets
+[VU 1] Creating 10,000 transactions...
+[VU 1] Created 1000/10000 transactions (Success: 1000, Errors: 0)
+...
+```
+
+### Summary Report
+
+Di akhir test, akan menampilkan summary:
+
+```
+======================================
+LOAD TEST SUMMARY - 100 USERS
+======================================
+
+Test Configuration:
+  Virtual Users: 100
+  Per User Tasks:
+    - 1 Registration
+    - 10 Wallets
+    - 10,000 Transactions
+    - 1,000 Debts
+    - 2 Exports (CSV + Excel)
+
+HTTP Metrics:
+  Total Requests: 1,100,700
+  Requests/sec: 250.00
+  Error Rate: 0.05%
+
+Response Times:
+  Average: 150.00ms
+  Median (p50): 120.00ms
+  p95: 500.00ms
+  p99: 1200.00ms
+  Max: 3000.00ms
+```
 
 ### JSON Report
 
-The test generates a detailed JSON report in `reports/summary.json`:
-
-```bash
-# View summary
-jq '.metrics | keys' reports/summary.json
-
-# View HTTP metrics
-jq '.metrics.http_req_duration' reports/summary.json
-
-# View error rate
-jq '.metrics.http_req_failed' reports/summary.json
+Report detail disimpan di:
+```
+performance-tests/reports/summary.json
 ```
 
-### Grafana Integration
+## Troubleshooting
 
-If you have Grafana + Prometheus running, you can view real-time metrics:
+### 1. Connection Refused
 
-1. Access Grafana: http://localhost:3000
-2. Navigate to Explore
-3. Query: `rate(http_server_requests_seconds_count[1m])`
+**Problem**: `dial: connection refused`
 
-## Advanced Usage
+**Solution**:
+- Pastikan aplikasi running di `http://localhost:8081`
+- Check dengan: `curl http://localhost:8081/v1/api/actuator/health`
 
-### Environment Variables
+### 2. Database Connection Pool Exhausted
 
-```bash
-# Custom base URL
-export BASE_URL=http://api.example.com
-k6 run k6-test.js
+**Problem**: `HikariPool - Connection is not available`
 
-# Multiple environment variables
-BASE_URL=http://localhost:8080 k6 run k6-test.js
-```
-
-### Cloud Execution
-
-Run test in K6 Cloud for distributed load testing:
-
-```bash
-# Login to K6 Cloud
-k6 login cloud
-
-# Run in cloud
-k6 cloud k6-test.js
-```
-
-### CI/CD Integration
-
-**GitHub Actions example:**
-
+**Solution**:
 ```yaml
-name: Performance Tests
-
-on: [push, pull_request]
-
-jobs:
-  performance:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Run K6 test
-        uses: grafana/k6-action@v0.3.0
-        with:
-          filename: performance-tests/k6-test.js
-          flags: --out json=reports/results.json
+# application.yml
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
 ```
 
-## Best Practices
+### 3. Out of Memory
 
-1. **Run on isolated environment:** Avoid running on production
-2. **Start small:** Begin with fewer VUs, increase gradually
-3. **Monitor resources:** Watch CPU, memory, database connections
-4. **Analyze trends:** Run regularly to detect performance regression
-5. **Set realistic thresholds:** Based on your SLA requirements
+**Problem**: `java.lang.OutOfMemoryError: Java heap space`
 
-## Support
+**Solution**:
+```bash
+./gradlew bootRun -Dspring-boot.run.jvmArguments="-Xmx4g -Xms2g"
+```
 
-For issues or questions:
-- Check application logs: `logs/application.log`
-- Check K6 documentation: https://k6.io/docs/
-- Review test output for specific error messages
+### 4. Export Returns 403
+
+**Expected**: Export adalah premium feature, user yang baru register akan mendapat 403.
+
+Untuk test export, buat user dengan premium tier terlebih dahulu atau ubah script untuk skip export.
+
+### 5. Test Too Slow
+
+**Solution**:
+- Reduce user count (ubah `vus: 100` menjadi `vus: 10`)
+- Reduce transactions per user (ubah loop 10000 menjadi 1000)
+- Enable database indexing
+- Scale up application resources
+
+## Tips untuk Production Load Test
+
+1. **Warm-up Database**: Jalankan test kecil dulu untuk warm-up connection pool
+2. **Monitor Resources**: Gunakan monitoring tools (Grafana, Prometheus)
+3. **Incremental Load**: Test dengan 10, 50, 100 users secara bertahap
+4. **Database Tuning**:
+   - Enable connection pooling
+   - Add proper indexes
+   - Tune PostgreSQL settings
+5. **Cleanup**: Hapus test data setelah selesai
+
+## Cleanup Test Data
+
+Setelah test selesai, hapus test data:
+
+```sql
+-- Delete test users and related data
+DELETE FROM users WHERE email LIKE 'loadtest-user-%@example.com';
+-- Cascade delete akan menghapus semua related records
+```
+
+Atau reset database:
+
+```bash
+./gradlew flywayClean flywayMigrate
+```
+
+## Notes
+
+- Test ini akan membuat data dalam jumlah sangat besar di database
+- Pastikan backup database sebelum menjalankan test
+- Monitor disk space selama test
+- Export feature memerlukan premium subscription, expect 403 response untuk free users
 
 ---
 
-**Last Updated:** November 25, 2025
+**Last Updated:** December 17, 2025
 **K6 Version:** v0.48+
-**Target API:** Expense Tracker REST API v1.0
+**Target API:** Expense Tracker REST API with context path `/v1/api/`

@@ -44,3 +44,5 @@ postgres-data/
 prometheus-data/
 grafana-data/
 /logs/
+
+.*

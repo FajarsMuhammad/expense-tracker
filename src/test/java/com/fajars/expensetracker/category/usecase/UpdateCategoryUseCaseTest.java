@@ -7,11 +7,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fajars.expensetracker.category.Category;
-import com.fajars.expensetracker.category.CategoryRepository;
-import com.fajars.expensetracker.category.CategoryResponse;
-import com.fajars.expensetracker.category.CategoryType;
-import com.fajars.expensetracker.category.UpdateCategoryRequest;
+import com.fajars.expensetracker.category.domain.Category;
+import com.fajars.expensetracker.category.domain.CategoryRepository;
+import com.fajars.expensetracker.category.api.CategoryResponse;
+import com.fajars.expensetracker.category.domain.CategoryType;
+import com.fajars.expensetracker.category.api.UpdateCategoryRequest;
+import com.fajars.expensetracker.category.usecase.updatecategory.UpdateCategoryUseCase;
+import com.fajars.expensetracker.user.domain.User;
 import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
@@ -45,7 +47,7 @@ class UpdateCategoryUseCaseTest {
 
         userCategory = Category.builder()
                 .id(categoryId)
-                .user(com.fajars.expensetracker.user.User.builder().id(userId).build())
+                .user(User.builder().id(userId).build())
                 .name("Freelance")
                 .type(CategoryType.INCOME)
                 .createdAt(new Date())
