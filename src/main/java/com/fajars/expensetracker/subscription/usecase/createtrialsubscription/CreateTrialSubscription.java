@@ -24,7 +24,8 @@ public interface CreateTrialSubscription {
      * <p>Since Milestone 6: All new users get 14-day trial automatically.
      * This is their one-time trial opportunity.
      *
+     * @param userId User ID of the newly registered user
      * @return created trial subscription
      */
-    Subscription createTrialForNewUser();
+    Subscription createTrialForNewUser(java.util.UUID userId);
 }

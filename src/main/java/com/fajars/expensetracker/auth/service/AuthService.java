@@ -92,7 +92,7 @@ public class AuthService {
         log.debug("User created: userId={}", user.getId());
 
         // Step 3: Create TRIAL subscription (14 days PREMIUM)
-        Subscription subscription = createTrialSubscription.createTrialForNewUser();
+        Subscription subscription = createTrialSubscription.createTrialForNewUser(user.getId());
         log.debug("TRIAL subscription created: subscriptionId={}, expiresAt={}",
                   subscription.getId(), subscription.getEndedAt());
 
