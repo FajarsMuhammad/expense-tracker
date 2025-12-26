@@ -86,8 +86,7 @@ public class CreateTrialSubscriptionUseCase implements CreateTrialSubscription {
 
     @Override
     @Transactional
-    public Subscription createTrialForNewUser() {
-        UUID userId = currentUserProvider.getUserId();
+    public Subscription createTrialForNewUser(UUID userId) {
         log.info("Creating TRIAL subscription for new user registration: {}", userId);
 
         User user = userRepository.findById(userId)
