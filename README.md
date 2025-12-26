@@ -1938,8 +1938,8 @@ Found a bug? Please report it!
 
 ### Contact
 
-- **Email**: fajar.sutiono@example.com (replace with actual email)
-- **GitHub**: [@fajars](https://github.com/fajars) (replace with actual username)
+- **Email**: fajar.sudarmaji15@gmail.com
+- **GitHub**: [https://github.com/FajarsMuhammad]
 - **LinkedIn**: [Your LinkedIn](https://linkedin.com/in/yourprofile) (optional)
 
 ## Acknowledgments
